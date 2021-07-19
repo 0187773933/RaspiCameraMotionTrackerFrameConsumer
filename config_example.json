@@ -1,0 +1,25 @@
+{
+    "server": {
+        "host": "0.0.0.0" ,
+        "port": 9379
+    } ,
+    "redis": {
+        "host": "127.0.0.1" ,
+        "port": 6379 ,
+        "db": 1 ,
+        "prefix": "RPMA." ,
+        "password": ""
+    } ,
+    "misc": {
+        "most_recent_motion_events_total": 25 ,
+        "time_zone": "US/Eastern"
+    } ,
+    "notifications": [
+        {
+            "window": 600 ,
+            "max_events": 2 ,
+            "type": "sms" ,
+            "number": "+1XXXXXXXXXX"
+        }
+    ]
+}
