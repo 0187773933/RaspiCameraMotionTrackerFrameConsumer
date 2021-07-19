@@ -97,6 +97,9 @@ def ParseConfig():
 				"prefix": os.environ["RPMA_REDIS_PREFIX"] ,
 				"password": os.environ["RPMA_REDIS_PASSWORD"]
 			} ,
+			"pose_estimation": {
+				"minimum_average": os.environ["RPMA_POSE_ESTIMATION_MINIMUM_AVERAGE"]
+			} ,
 			"misc": {
 				"most_recent_motion_events_total": os.environ("RPMA_MOST_RECENT_MOTION_EVENTS_TOTAL") , # for database
 				"time_zone": os.environ("RPMA_TIME_ZONE")

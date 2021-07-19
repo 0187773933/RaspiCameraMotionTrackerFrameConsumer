@@ -7,10 +7,11 @@ source ./venv/bin/activate
 pip install ./wheels/numpy-1.19.5-cp37-cp37m-linux_armv7l.whl
 pip install ./wheels/h5py-2.10.0-cp37-cp37m-linux_armv7l.whl
 pip install ./wheels/grpcio-1.32.0-cp37-cp37m-linux_armv7l.whl
-cat ./wheels/tensorflow-2.4.0-cp37-cp37m-linux_armv7l.whl.zip* > ./wheels/tensorflow.zip
-unzip ./wheels/tensorflow.zip
-mv ./tensorflow-2.4.0-cp37-cp37m-linux_armv7l.whl ./wheels/
-rm ./wheels/tensorflow.zip
+# cat ./wheels/tensorflow-2.4.0-cp37-cp37m-linux_armv7l.whl.zip* > ./wheels/tensorflow.zip
+# unzip ./wheels/tensorflow.zip
+# mv ./tensorflow-2.4.0-cp37-cp37m-linux_armv7l.whl ./wheels/
+# rm ./wheels/tensorflow.zip
+wget https://39363.org/WHEELS/RASPI/tensorflow-2.4.0-cp37-cp37m-linux_armv7l.whl -O ./wheels/tensorflow-2.4.0-cp37-cp37m-linux_armv7l.whl
 pip install ./wheels/tensorflow-2.4.0-cp37-cp37m-linux_armv7l.whl
 pip install ./wheels/sanic-21.6.0-py3-none-any.whl
 pip install ./wheels/uvloop-0.15.2-cp37-cp37m-linux_armv7l.whl

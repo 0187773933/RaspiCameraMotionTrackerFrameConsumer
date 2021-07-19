@@ -117,7 +117,7 @@ def OnMotionFrame( frame ):
 
 async def process_opencv_frame( json_data ):
 	try:
-		print( f"\nSinglePoseLightningv3.tflite( {len( json_data['frame_buffer_b64_string'] )} )" )
+		print( f"\nProcessing Frame --> SinglePoseLightningv3.tflite( {len( json_data['frame_buffer_b64_string'] )} )" )
 		image_data = base64.b64decode( json_data['frame_buffer_b64_string'] )
 		image = tf.image.decode_image( image_data , channels=3 )
 		image = tf.expand_dims( image , axis=0 )
@@ -131,7 +131,7 @@ async def process_opencv_frame( json_data ):
 		keypoints_with_scores = keypoints_with_scores[0][0]
 		scores = [ x[2] for x in keypoints_with_scores ]
 		average_score = np.mean( scores )
-		print( f"Average Score = {average_score}" )
+		# print( f"Average Score = {average_score}" )
 		return {
 			"average_score": str( average_score ) ,
 			"time_stamp": json_data["time_stamp"] ,

@@ -14,12 +14,17 @@
         "most_recent_motion_events_total": 25 ,
         "time_zone": "US/Eastern"
     } ,
-    "notifications": [
-        {
-            "window": 600 ,
-            "max_events": 2 ,
-            "type": "sms" ,
-            "number": "+1XXXXXXXXXX"
-        }
-    ]
+	"pose_estimation": {
+		"minimum_average": 0.20
+	} ,
+	"time_windows": [
+		{
+			"seconds": 600 ,
+			"max_events": 2 ,
+			"notification": {
+				"type": "sms" ,
+				"number": "+1XXXYYYZZZZ"
+			}
+		}
+	]
 }
