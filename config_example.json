@@ -15,7 +15,7 @@
         "time_zone": "US/Eastern"
     } ,
 	"pose_estimation": {
-		"minimum_average": 0.20
+		"minimum_average": 0.27
 	} ,
 	"time_windows": [
 		{

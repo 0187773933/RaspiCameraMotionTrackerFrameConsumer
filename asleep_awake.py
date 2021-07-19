@@ -36,14 +36,16 @@ async def Decide( config , json_data ):
 			if time_difference < time_window["seconds"]:
 				total_events_in_time_window += 1
 		if total_events_in_time_window > time_window["max_events"]:
-			print( f"Total Events in the Previous {time_window['seconds']} Seconds : {total_events_in_time_window} === Is greater than the defined maximum of {time_window['max_events']} events" )
+			print( f"Total Events in the Previous {time_window['seconds']} Seconds : {total_events_in_time_window} === Is GREATER than the defined maximum of {time_window['max_events']} events" )
 			if float( new_motion_event["pose_scores"]["average_score"] ) > config["pose_estimation"]["minimum_average"]:
 				print( f"Average Pose Score : {new_motion_event['pose_scores']['average_score']} is GREATER than defined Minimum Average of {config['pose_estimation']['minimum_average']}" )
 				print( "SHOULD Send Notification" )
 				new_motion_event["awake"] = True
 			else:
 				print( f"Average Pose Score : {new_motion_event['pose_scores']['average_score']} is LESS than defined Minimum Average of {config['pose_estimation']['minimum_average']}" )
-
+				print( "NOT Sending Notification" )
+		else:
+			print( f"Total Events in the Previous {time_window['seconds']} Seconds : {total_events_in_time_window} === Is LESS than the defined maximum of {time_window['max_events']} events" )
 
 	# 5.) Print Info
 	# for index , event in enumerate( most_recent ):
