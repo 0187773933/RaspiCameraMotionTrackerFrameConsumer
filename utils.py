@@ -60,17 +60,25 @@ def get_redis_connection():
 		decode_responses=True
 		)
 
-def redis_get_most_recent( redis , key , new_motion_event , total_motion_events ):
+# def redis_get_most_recent( redis , key , new_motion_event , total_motion_events ):
+# 	most_recent = redis.get( key )
+# 	if most_recent == None:
+# 		most_recent = []
+# 		most_recent.append( new_motion_event )
+# 	else:
+# 		# most_recent = str( most_recent , 'utf-8' )
+# 		most_recent = json.loads( most_recent )
+# 		most_recent.append( new_motion_event )
+# 		if len( most_recent ) > total_motion_events:
+# 			most_recent.pop( 0 )
+# 	return most_recent
+
+def redis_get_most_recent( redis , key ):
 	most_recent = redis.get( key )
 	if most_recent == None:
 		most_recent = []
-		most_recent.append( new_motion_event )
 	else:
-		# most_recent = str( most_recent , 'utf-8' )
 		most_recent = json.loads( most_recent )
-		most_recent.append( new_motion_event )
-		if len( most_recent ) > total_motion_events:
-			most_recent.pop( 0 )
 	return most_recent
 
 # https://stackoverflow.com/a/22211254
