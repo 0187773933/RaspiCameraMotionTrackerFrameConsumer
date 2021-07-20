@@ -5,9 +5,10 @@ from pprint import pprint
 import pysnooper
 # import pickle
 
-def SendNotification( config ):
+def SendNotification( config , time_window ):
+	# TODO Add Cooloff Support
 	print( "Sending Notification" )
-	print( config )
+
 
 async def Decide( config , json_data ):
 	# 1.) Run 'nets' on Image Buffer
@@ -31,12 +32,10 @@ async def Decide( config , json_data ):
 	time_objects = [ utils.parse_go_time_stamp( x['time_stamp'] ) for x in most_recent ]
 	seconds_between_new_motion_event_and_previous_events = [ int( ( new_motion_event_time_object["date_time_object"] - x["date_time_object"] ).total_seconds() ) for x in time_objects ]
 
-	# 4.) Iterate Through Each Configed Time Window and Check if Total Events Surpases Maximum
-	# ONLY IF , Total Events Surpases Maximum , then check if average pose score is greater than Minimum Defined Average
-	# THEN , ONLY IF The Number of "awake" classificatuion
-
 	# 4.) Tally Total Motion Events in Each Configed Time Window
 	# AND Compute Average of Average Pose Scores in Each Configed Time Window
+	# ONLY IF , Total Events Surpases Maximum , then check if average pose score is greater than Minimum Defined Average
+	# THEN , ONLY IF The Number of "awake" classificatuion
 	time_windows = config["time_windows"]
 	for time_window_index , time_window in enumerate( time_windows ):
 		motion_events = 0
@@ -50,25 +49,12 @@ async def Decide( config , json_data ):
 			print( f"Total Motion Events in the Previous {time_window['seconds']} Seconds : {motion_events} === Is GREATER than the defined maximum of {time_window['motion']['max_events']} events" )
 			if pose_average > time_window['pose']['minimum_moving_average']:
 				print( f"Moving Pose Score Average : {pose_average} is GREATER than defined Minimum Moving Average of {time_window['pose']['minimum_moving_average']}" )
-				print( "Sending Notification" )
-				# TODO Add Cooloff Support
 				new_motion_event["awake"] = True
+				SendNotification( config , time_window )
 			else:
 				print( f"Moving Pose Score Average : {pose_average} is LESS than defined Minimum Moving Average of {time_window['pose']['minimum_moving_average']}" )
 		else:
 			print( f"Total Motion Events in the Previous {time_window['seconds']} Seconds : {motion_events} === Is LESS than the defined maximum of {time_window['motion']['max_events']} events" )
-
-		# if total_motion_events_in_time_window > time_window["motion"]["max_events"]:
-		# 	print( f"Total Motion Events in the Previous {time_window['seconds']} Seconds : {total_motion_events_in_time_window} === Is GREATER than the defined maximum of {time_window['motion']['max_events']} events" )
-		# 	if float( new_motion_event["pose_scores"]["average_score"] ) > config["pose_estimation"]["minimum_average"]:
-		# 		print( f"Average Pose Score : {new_motion_event['pose_scores']['average_score']} is GREATER than defined Minimum Average of {config['pose_estimation']['minimum_average']}" )
-		# 		print( "SHOULD Send Notification" )
-		# 		new_motion_event["awake"] = True
-		# 	else:
-		# 		print( f"Average Pose Score : {new_motion_event['pose_scores']['average_score']} is LESS than defined Minimum Average of {config['pose_estimation']['minimum_average']}" )
-		# 		print( "NOT Sending Notification" )
-		# else:
-		# 	print( f"Total Motion Events in the Previous {time_window['seconds']} Seconds : {total_motion_events_in_time_window} === Is LESS than the defined maximum of {time_window['motion']['max_events']} events" )
 
 	# 5.) Print Info
 	# for index , event in enumerate( most_recent ):
