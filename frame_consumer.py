@@ -65,19 +65,27 @@ class FrameConsumer:
 				time_window["notifications"]["sms"]["to_number"] ,
 				f'{time_window["notifications"]["sms"]["message_prefix"]} @@ {new_motion_event["date_time_string"]}' ,
 			)
+		if "voice" in time_window["notifications"]:
+			utils.twilio_voice_call(
+				self.twilio_client ,
+				time_window["notifications"]["voice"]["from_number"] ,
+				time_window["notifications"]["voice"]["to_number"] ,
+				time_window["notifications"]["voice"]["callback_url"] ,
+			)
 
 	# Actual Logic
 	async def decide( self , json_data ):
-		# 1.) Run 'nets' on Image Buffer
-		pose_scores = await pose_light.process_opencv_frame( json_data )
 
-		# 2.) Get 'Most Recent' Array of Motion Events
 		new_motion_event = {
 			"time_stamp": json_data["time_stamp"] ,
-			"pose_scores": pose_scores ,
 			"frame_buffer_b64_string": json_data['frame_buffer_b64_string'] ,
 			"awake": False
 		}
+
+		# 1.) Run 'nets' on Image Buffer
+		new_motion_event["pose_scores"] = await pose_light.process_opencv_frame( json_data )
+
+		# 2.) Get 'Most Recent' Array of Motion Events
 		most_recent_key = f'{self.config["redis"]["prefix"]}.MOTION_EVENTS.MOST_RECENT'
 		most_recent = utils.redis_get_most_recent( self.redis , most_recent_key )
 
@@ -114,7 +122,7 @@ class FrameConsumer:
 			else:
 				print( f"Total Motion Events in the Previous {time_window['seconds']} Seconds : {motion_events} === Is LESS than the defined maximum of {time_window['motion']['max_events']} events" )
 
-		# 6.) Store Most Recent Array Back into DB
+		# 5.) Store Most Recent Array Back into DB
 		most_recent.append( new_motion_event )
 		if len( most_recent ) > self.config["misc"]["most_recent_motion_events_total"]:
 			most_recent.pop( 0 )
