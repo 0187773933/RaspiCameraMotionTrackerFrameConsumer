@@ -88,9 +88,9 @@ class FrameConsumer:
 		seconds_between_new_motion_event_and_previous_events = [ int( ( new_motion_event_time_object["date_time_object"] - x["date_time_object"] ).total_seconds() ) for x in time_objects ]
 
 		# 4.) Tally Total Motion Events in Each Configed Time Window
-		# AND Compute Average of Average Pose Scores in Each Configed Time Window
-		# ONLY IF , Total Events Surpases Maximum , then check if average pose score is greater than Minimum Defined Average
-		# THEN , ONLY IF The Number of "awake" classificatuion
+		# AND Compute Moving Average of Average Pose Scores in Each Configed Time Window
+		# ONLY IF , Total Events Surpases Maximum , then check if the moving average pose score is greater than Minimum Defined Moving Average
+		# THEN , Send Notification
 		time_windows = self.config["time_windows"]
 		for time_window_index , time_window in enumerate( time_windows ):
 			motion_events = 0
