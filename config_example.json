@@ -10,20 +10,45 @@
         "prefix": "RPMA." ,
         "password": ""
     } ,
-    "misc": {
-        "most_recent_motion_events_total": 25 ,
-        "time_zone": "US/Eastern"
-    } ,
+    "twilio": {
+		"sid": "asdfasdfasdf" ,
+		"auth_token": "asdfasdfasdf"
+	} ,
+	"misc": {
+		"most_recent_motion_events_total": 25 ,
+		"time_zone": "US/Eastern" ,
+		"notification_cooloffs": {
+			"sms": 0 ,
+			"voice": 180
+		}
+	} ,
 	"pose_estimation": {
 		"minimum_average": 0.27
 	} ,
 	"time_windows": [
 		{
 			"seconds": 600 ,
-			"max_events": 2 ,
-			"notification": {
-				"type": "sms" ,
-				"number": "+1XXXYYYZZZZ"
+			"motion": {
+				"max_events": 2
+			} ,
+			"pose": {
+				"max_events": 2 ,
+				"minimum_moving_average": 0.215 ,
+				"total_events_to_pull_from": 1
+			} ,
+			"notifications": {
+				"sms": {
+					"from_number": "+AXXXYYYZZZZ" ,
+					"to_number": "+AXXXYYYZZZZ" ,
+					"message_prefix": "Motion" ,
+					"cool_down": 0
+				} ,
+				"voice": {
+					"from_number": "+AXXXYYYZZZZ" ,
+					"to_number": "+AXXXYYYZZZZ" ,
+					"callback_url": "https://example.com/twiliocall" ,
+					"cool_down": 180
+				}
 			}
 		}
 	]

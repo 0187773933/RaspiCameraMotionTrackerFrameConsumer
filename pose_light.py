@@ -85,7 +85,6 @@ def run_inference( image_path ):
 	# plt.savefig( 'test.jpg' )
 	# _ = plt.axis( 'off' )
 
-
 def process_image_file( image_path ):
 	image = tf.io.read_file( image_path )
 	image = tf.compat.v1.image.decode_jpeg( image )

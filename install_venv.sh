@@ -25,3 +25,4 @@ pip install ./wheels/numpy-1.21.0-cp37-cp37m-linux_armv7l.whl
 pip install tensorflow_hub
 pip install redis
 pip install pytz
+pip install twilio

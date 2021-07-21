@@ -184,7 +184,7 @@ def redis_on_message( message ):
 
 def twilio_message( number , message ):
 	try:
-		TwilioClient = Client( "ACd4e1f0a8e96f2d48e7b6c1027d833279" , "4eda43216375b68e3c5062176ecde1e6" )
+		TwilioClient = Client( "why" , "why" )
 		message = TwilioClient.messages.create( number ,
 			body=message ,
 			from_=Personal[ 'twilio' ][ 'fromSMSNumber' ] ,
@@ -197,7 +197,7 @@ def twilio_message( number , message ):
 
 def twilio_call( number ):
 	try:
-		TwilioClient = Client( "ACd4e1f0a8e96f2d48e7b6c1027d833279" , "4eda43216375b68e3c5062176ecde1e6" )
+		TwilioClient = Client( "why" , "why" )
 		new_call = TwilioClient.calls.create( url=Personal[ 'twilio' ][ 'twilio_response_server_url' ] , to=Personal[ 'twilio' ][ 'toSMSExtraNumber' ] , from_=Personal[ 'twilio' ][ 'fromSMSNumber' ] , method="POST" )
 	except Exception as e:
 		print( e )
@@ -315,8 +315,8 @@ class TenvisVideo():
 
 		min_area = 500
 		delta_thresh = 5
-
 		motionCounter = 0
+
 
 		#self.simulate_motion()
 

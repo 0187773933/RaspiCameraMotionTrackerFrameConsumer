@@ -5,7 +5,7 @@ from pprint import pprint
 import pysnooper
 # import pickle
 
-def SendNotification( config , time_window ):
+def SendNotification( motion_event , config , time_window ):
 	# TODO Add Cooloff Support
 	print( "Sending Notification" )
 
@@ -50,7 +50,7 @@ async def Decide( config , json_data ):
 			if pose_average > time_window['pose']['minimum_moving_average']:
 				print( f"Moving Pose Score Average : {pose_average} is GREATER than defined Minimum Moving Average of {time_window['pose']['minimum_moving_average']}" )
 				new_motion_event["awake"] = True
-				SendNotification( config , time_window )
+				SendNotification( new_motion_event , config , time_window )
 			else:
 				print( f"Moving Pose Score Average : {pose_average} is LESS than defined Minimum Moving Average of {time_window['pose']['minimum_moving_average']}" )
 		else:
