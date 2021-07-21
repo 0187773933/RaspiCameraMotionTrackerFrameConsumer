@@ -139,6 +139,8 @@ def run_in_background( function_pointer , *args , **kwargs ):
 	# 	result = executor.submit( function_pointer , *args , **kwargs ).result( timeout=33 )
 	# 	print( "background task finished" )
 	# 	callback_function_pointer( result )
+
+	# https://docs.python.org/3/library/threading.html#threading.Thread
 	t = threading.Thread( target=function_pointer , args=args , kwargs=kwargs , daemon=True )
 	t.start()
 
