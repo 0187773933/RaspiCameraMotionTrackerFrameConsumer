@@ -52,6 +52,10 @@ class FrameConsumer:
 		print( f"Starting On === http://{self.config['server']['host']}:{self.config['server']['port']}" )
 		self.server.run( host=self.config['server']['host'] , port=self.config['server']['port'] )
 
+	def on_notification_finished( self , result ):
+		print( "Notification Callback()" )
+		print( result )
+
 	def send_notification( self , new_motion_event , time_window ):
 		# TODO Add Cooloff Support
 		print( "Sending Notification" )
@@ -66,11 +70,13 @@ class FrameConsumer:
 				f'{time_window["notifications"]["sms"]["message_prefix"]} @@ {new_motion_event["date_time_string"]}' ,
 			)
 		if "voice" in time_window["notifications"]:
-			utils.twilio_voice_call(
+			utils.run_in_background(
+				utils.twilio_voice_call ,
 				self.twilio_client ,
 				time_window["notifications"]["voice"]["from_number"] ,
 				time_window["notifications"]["voice"]["to_number"] ,
 				time_window["notifications"]["voice"]["callback_url"] ,
+				self.on_notification_finished
 			)
 
 	# Actual Logic
@@ -113,7 +119,7 @@ class FrameConsumer:
 			pose_average = ( pose_sum / float( time_window["pose"]["total_events_to_pull_from"] ) )
 			if motion_events > time_window['motion']['max_events']:
 				print( f"Total Motion Events in the Previous {time_window['seconds']} Seconds : {motion_events} === Is GREATER than the defined maximum of {time_window['motion']['max_events']} events" )
-				if pose_average > time_window['pose']['minimum_moving_average']:
+				if pose_average >= time_window['pose']['minimum_moving_average']:
 					print( f"Moving Pose Score Average : {pose_average} is GREATER than defined Minimum Moving Average of {time_window['pose']['minimum_moving_average']}" )
 					new_motion_event["awake"] = True
 					self.send_notification( new_motion_event , time_window )

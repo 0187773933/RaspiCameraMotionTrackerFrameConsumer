@@ -8,6 +8,10 @@ import redis
 import datetime
 import time
 
+# import multiprocessing
+# import concurrent.futures
+import threading
+
 # from datetime import datetime , timedelta , time
 # from time import localtime, strftime , sleep , time
 
@@ -88,8 +92,10 @@ def twilio_message( twilio_client , from_number , to_number , message ):
 	except Exception as e:
 		print ( e )
 
-def twilio_voice_call( twilio_client , from_number , to_number , server_callback_endpoint ):
+def twilio_voice_call( twilio_client , from_number , to_number , server_callback_endpoint , callback_function ):
 	try:
+		print( "here in twilio_voice_call" )
+		print( from_number , to_number , server_callback_endpoint )
 		start_time = time.time()
 		new_call = twilio_client.calls.create(
 			from_=from_number ,
@@ -113,10 +119,28 @@ def twilio_voice_call( twilio_client , from_number , to_number , server_callback
 				completed = True
 				completed_duration = int( time.time() - start_time )
 				break
-		return { "answered": answered , "completed": completed , "answer_duration": answer_duration , "completed_duration": answer_duration  }
+		# return { "answered": answered , "completed": completed , "answer_duration": answer_duration , "completed_duration": answer_duration  }
+		callback_function( { "answered": answered , "completed": completed , "answer_duration": answer_duration , "completed_duration": answer_duration } )
 	except Exception as e:
 		print( e )
-		print( "failed to make twilio call" )
+		callback_function( "failed to make twilio call" )
+
+def run_in_background( function_pointer , *args , **kwargs ):
+	# cpu_count = multiprocessing.cpu_count()
+	# pool = concurrent.futures.ThreadPoolExecutor( max_workers=cpu_count )
+	# pool._max_workers = cpu_count
+	# pool._adjust_thread_count()
+	# function_pointer = pool.submit( function_pointer , *args , **kwargs )
+	# function_pointer.add_done_callback( callback_function_pointer )
+	# executor.submit( lambda: executor.submit(func, arg).result(timeout=50))
+	# with concurrent.futures.ThreadPoolExecutor() as executor:
+	# 	print( "background task starting" )
+	# 	# result = executor.submit( lambda: executor.submit( function_pointer , *args , **kwargs ).result( timeout=33 ) )
+	# 	result = executor.submit( function_pointer , *args , **kwargs ).result( timeout=33 )
+	# 	print( "background task finished" )
+	# 	callback_function_pointer( result )
+	t = threading.Thread( target=function_pointer , args=args , kwargs=kwargs , daemon=True )
+	t.start()
 
 
 # def base64_decode( base64_message ):
