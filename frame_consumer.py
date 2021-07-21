@@ -94,11 +94,12 @@ class FrameConsumer:
 		# 2.) Get 'Most Recent' Array of Motion Events
 		most_recent_key = f'{self.config["redis"]["prefix"]}.MOTION_EVENTS.MOST_RECENT'
 		most_recent = utils.redis_get_most_recent( self.redis , most_recent_key )
+		most_recent.append( new_motion_event )
 
 		# 3.) Calculate Time Differences Between 'Most Recent' Frame and Each 'Previous' Frame in the Saved List
 		new_motion_event_time_object = utils.parse_go_time_stamp( self.timezone , json_data["time_stamp"] )
 		new_motion_event["date_time_string"] = new_motion_event_time_object["date_time_string"]
-		time_objects = [ utils.parse_go_time_stamp( self.timezone , x['time_stamp'] ) for x in most_recent ]
+		time_objects = [ utils.parse_go_time_stamp( self.timezone , x['time_stamp'] ) for x in most_recent[0:-1] ]
 		seconds_between_new_motion_event_and_previous_events = [ int( ( new_motion_event_time_object["date_time_object"] - x["date_time_object"] ).total_seconds() ) for x in time_objects ]
 
 		# 4.) Tally Total Motion Events in Each Configed Time Window
@@ -129,11 +130,9 @@ class FrameConsumer:
 				print( f"Total Motion Events in the Previous {time_window['seconds']} Seconds : {motion_events} === Is LESS than the defined maximum of {time_window['motion']['max_events']} events" )
 
 		# 5.) Store Most Recent Array Back into DB
-		most_recent.append( new_motion_event )
 		if len( most_recent ) > self.config["misc"]["most_recent_motion_events_total"]:
 			most_recent.pop( 0 )
 		self.redis.set( most_recent_key , json.dumps( most_recent ) )
-		# pprint( most_recent )
 		return new_motion_event
 
 	def Start( self ):
