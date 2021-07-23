@@ -22,6 +22,7 @@ class FrameConsumer:
 		utils.setup_signal_handlers( self.on_shutdown )
 		self.redis = utils.setup_redis_connection( self.config["redis"] )
 		self.twilio_client = utils.setup_twilio_client( self.config["twilio"] )
+		self.time_windows = utils.setup_time_windows( self.redis , self.config )
 	def on_shutdown( self , signal ):
 		print( f"Frame Consumer Shutting Down === {str(signal)}" )
 		sys.exit( 1 )
@@ -56,26 +57,43 @@ class FrameConsumer:
 		print( "Notification Callback()" )
 		print( result )
 
-	def send_notification( self , new_motion_event , time_window ):
-		# TODO Add Cooloff Support
-		print( "Sending Notification" )
-		if "notifications" not in time_window:
+	def send_notification( self , new_motion_event , key ):
+		if "notifications" not in self.time_windows[key]:
 			print( "No Notification Info Provided" )
 			return
-		if "sms" in time_window["notifications"]:
+		# pprint( self.time_windows[key] )
+		if "sms" in self.time_windows[key]["notifications"]:
+			seconds_since_last_notification = utils.get_now_time_difference( self.timezone , self.time_windows[key]["notifications"]["sms"]["last_notified_time"]["date_time_object"] )
+			if seconds_since_last_notification < self.time_windows[key]["notifications"]["sms"]["cool_down"]:
+				print( f"Waiting [{seconds_since_last_notification}] Seconds Until Cooldown is Over" )
+				return
+			else:
+				print( f"It's Been {seconds_since_last_notification} Seconds Since the Last Message" )
+			self.time_windows[key]["notifications"]["sms"]["last_notified_time_int"] = utils.get_now_time_int( self.timezone )
+			# self.redis.set( f"{config['redis']['prefix']}.TIME_WINDOWS.{self.time_windows[key]['id']}" , json.dumps( self.time_windows[key] ) )
+			print( "Sending SMS Notification" )
 			utils.twilio_message(
 				self.twilio_client ,
-				time_window["notifications"]["sms"]["from_number"] ,
-				time_window["notifications"]["sms"]["to_number"] ,
-				f'{time_window["notifications"]["sms"]["message_prefix"]} @@ {new_motion_event["date_time_string"]}' ,
+				self.time_windows[key]["notifications"]["sms"]["from_number"] ,
+				self.time_windows[key]["notifications"]["sms"]["to_number"] ,
+				f'{self.time_windows[key]["notifications"]["sms"]["message_prefix"]} @@ {new_motion_event["date_time_string"]}' ,
 			)
-		if "voice" in time_window["notifications"]:
+		if "voice" in self.time_windows[key]["notifications"]:
+			seconds_since_last_notification = utils.get_now_time_difference( self.timezone , self.time_windows[key]["notifications"]["voice"]["last_notified_time"]["date_time_object"] )
+			if seconds_since_last_notification < self.time_windows[key]["notifications"]["voice"]["cool_down"]:
+				print( f"Waiting [{seconds_since_last_notification}] Seconds Until Cooldown is Over" )
+				return
+			else:
+				print( f"It's Been {seconds_since_last_notification} Seconds Since the Last Message" )
+			self.time_windows[key]["notifications"]["voice"]["last_notified_time_int"] = utils.get_now_time_int( self.timezone )
+			# self.redis.set( f"{config['redis']['prefix']}.TIME_WINDOWS.{self.time_windows[key]['id']}" , json.dumps( self.time_windows[key] ) )
+			print( "Sending Voice Call Notification" )
 			utils.run_in_background(
 				utils.twilio_voice_call ,
 				self.twilio_client ,
-				time_window["notifications"]["voice"]["from_number"] ,
-				time_window["notifications"]["voice"]["to_number"] ,
-				time_window["notifications"]["voice"]["callback_url"] ,
+				self.time_windows[key]["notifications"]["voice"]["from_number"] ,
+				self.time_windows[key]["notifications"]["voice"]["to_number"] ,
+				self.time_windows[key]["notifications"]["voice"]["callback_url"] ,
 				self.on_notification_finished
 			)
 
@@ -106,28 +124,27 @@ class FrameConsumer:
 		# AND Compute Moving Average of Average Pose Scores in Each Configed Time Window
 		# ONLY IF , Total Events Surpases Maximum , then check if the moving average pose score is greater than Minimum Defined Moving Average
 		# THEN , Send Notification
-		time_windows = self.config["time_windows"]
-		for time_window_index , time_window in enumerate( time_windows ):
+		for index , key in enumerate( self.time_windows ):
 			motion_events = 0
 			# pose_sum = 0.0
-			pose_sums = [ float( x["pose_scores"]["average_score"] ) for x in most_recent[ ( -1 * time_window["pose"]["total_events_to_pull_from"] ): ] ]
+			pose_sums = [ float( x["pose_scores"]["average_score"] ) for x in most_recent[ ( -1 * self.time_windows[key]["pose"]["total_events_to_pull_from"] ): ] ]
 			pose_sum = sum( pose_sums )
 			for index , time_difference in enumerate( seconds_between_new_motion_event_and_previous_events ):
-				if time_difference < time_window["seconds"]:
+				if time_difference < self.time_windows[key]["seconds"]:
 					motion_events += 1
 					# pose_sum += float( most_recent[index]["pose_scores"]["average_score"] )
 			# pose_average = ( pose_sum / float( len( most_recent ) ) )
-			pose_average = ( pose_sum / float( time_window["pose"]["total_events_to_pull_from"] ) )
-			if motion_events > time_window['motion']['max_events']:
-				print( f"Total Motion Events in the Previous {time_window['seconds']} Seconds : {motion_events} === Is GREATER than the defined maximum of {time_window['motion']['max_events']} events" )
-				if pose_average >= time_window['pose']['minimum_moving_average']:
-					print( f"Moving Pose Score Average : {pose_average} is GREATER than defined Minimum Moving Average of {time_window['pose']['minimum_moving_average']}" )
+			pose_average = ( pose_sum / float( self.time_windows[key]["pose"]["total_events_to_pull_from"] ) )
+			if motion_events > self.time_windows[key]['motion']['max_events']:
+				print( f"Total Motion Events in the Previous {self.time_windows[key]['seconds']} Seconds : {motion_events} === Is GREATER than the defined maximum of {self.time_windows[key]['motion']['max_events']} events" )
+				if pose_average >= self.time_windows[key]['pose']['minimum_moving_average']:
+					print( f"Moving Pose Score Average : {pose_average} is GREATER than defined Minimum Moving Average of {self.time_windows[key]['pose']['minimum_moving_average']}" )
 					new_motion_event["awake"] = True
-					self.send_notification( new_motion_event , time_window )
+					self.send_notification( new_motion_event , key )
 				else:
-					print( f"Moving Pose Score Average : {pose_average} is LESS than defined Minimum Moving Average of {time_window['pose']['minimum_moving_average']}" )
+					print( f"Moving Pose Score Average : {pose_average} is LESS than defined Minimum Moving Average of {self.time_windows[key]['pose']['minimum_moving_average']}" )
 			else:
-				print( f"Total Motion Events in the Previous {time_window['seconds']} Seconds : {motion_events} === Is LESS than the defined maximum of {time_window['motion']['max_events']} events" )
+				print( f"Total Motion Events in the Previous {self.time_windows[key]['seconds']} Seconds : {motion_events} === Is LESS than the defined maximum of {self.time_windows[key]['motion']['max_events']} events" )
 
 		# 5.) Store Most Recent Array Back into DB
 		if len( most_recent ) > self.config["misc"]["most_recent_motion_events_total"]:

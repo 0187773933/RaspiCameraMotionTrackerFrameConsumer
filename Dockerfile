@@ -26,6 +26,7 @@ RUN apt-get install unzip -y
 RUN apt-get install net-tools -y
 RUN apt-get install iproute2 -y
 RUN apt-get install iputils-ping -y
+RUN apt-get install tzdata -y
 
 RUN apt-get install python-pip -y
 RUN apt-get install python3-pip -y
@@ -56,8 +57,13 @@ RUN apt-get install libxml2-dev -y
 RUN apt-get install libxmlsec1-dev -y
 RUN apt-get install liblzma-dev -y
 RUN apt-get install mecab-ipadic-utf8 -y
+RUN apt-get install libatlas-base-dev -y
+RUN apt-get install libopenjp2-7 -y
+RUN apt-get install libtiff5 -y
 
 ENV TZ="US/Eastern"
+RUN echo "US/Eastern" > /etc/timezone
+RUN dpkg-reconfigure -f noninteractive tzdata
 ARG USERNAME="morphs"
 ARG PASSWORD="asdfasdf"
 RUN useradd -m $USERNAME -p $PASSWORD -s "/bin/bash"

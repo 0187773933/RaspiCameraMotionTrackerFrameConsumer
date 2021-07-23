@@ -1,12 +1,15 @@
 import os
 import sys
+import math
 import signal
 import base64
 import binascii
+import hashlib
 import json
 import redis
 import datetime
 import time
+from pytz import timezone
 
 # import multiprocessing
 # import concurrent.futures
@@ -83,12 +86,14 @@ def parse_go_time_stamp( time_zone , time_stamp ):
 
 def twilio_message( twilio_client , from_number , to_number , message ):
 	try:
-		result = twilio_client.messages.create(
-			to_number ,
-			from_=from_number ,
-			body=message ,
-		)
-		return result
+		print( "here in twilio_message" )
+		print( from_number , to_number , message )
+		# result = twilio_client.messages.create(
+		# 	to_number ,
+		# 	from_=from_number ,
+		# 	body=message ,
+		# )
+		# return result
 	except Exception as e:
 		print ( e )
 
@@ -96,31 +101,30 @@ def twilio_voice_call( twilio_client , from_number , to_number , server_callback
 	try:
 		print( "here in twilio_voice_call" )
 		print( from_number , to_number , server_callback_endpoint )
-		start_time = time.time()
-		new_call = twilio_client.calls.create(
-			from_=from_number ,
-			to=to_number ,
-			url=server_callback_endpoint ,
-			method="POST"
-		)
-		answered = False
-		completed = False
-		answer_duration = None
-		completed_duration = None
-		for i in range( 30 ):
-			time.sleep( 1 )
-			new_call = new_call.update()
-			status = new_call.status
-			print( status )
-			if status == "in-progress":
-				answered = True
-				answer_duration = int( time.time() - start_time )
-			if status == "completed":
-				completed = True
-				completed_duration = int( time.time() - start_time )
-				break
-		# return { "answered": answered , "completed": completed , "answer_duration": answer_duration , "completed_duration": answer_duration  }
-		callback_function( { "answered": answered , "completed": completed , "answer_duration": answer_duration , "completed_duration": answer_duration } )
+		# start_time = time.time()
+		# new_call = twilio_client.calls.create(
+		# 	from_=from_number ,
+		# 	to=to_number ,
+		# 	url=server_callback_endpoint ,
+		# 	method="POST"
+		# )
+		# answered = False
+		# completed = False
+		# answer_duration = None
+		# completed_duration = None
+		# for i in range( 30 ):
+		# 	time.sleep( 1 )
+		# 	new_call = new_call.update()
+		# 	status = new_call.status
+		# 	print( status )
+		# 	if status == "in-progress":
+		# 		answered = True
+		# 		answer_duration = int( time.time() - start_time )
+		# 	if status == "completed":
+		# 		completed = True
+		# 		completed_duration = int( time.time() - start_time )
+		# 		break
+		# callback_function( { "answered": answered , "completed": completed , "answer_duration": answer_duration , "completed_duration": answer_duration } )
 	except Exception as e:
 		print( e )
 		callback_function( "failed to make twilio call" )
@@ -144,6 +148,36 @@ def run_in_background( function_pointer , *args , **kwargs ):
 	t = threading.Thread( target=function_pointer , args=args , kwargs=kwargs , daemon=True )
 	t.start()
 
+def get_now_time_int( time_zone ):
+	now = datetime.datetime.now().astimezone( time_zone )
+	return int( now.strftime( "%d%m%Y%H%M%S%f" ) )
+
+def get_now_time_difference( time_zone , start_date_time_object ):
+	print( start_date_time_object )
+	now = datetime.datetime.now().astimezone( time_zone )
+	print( now )
+	# >>> start = datetime.datetime.strptime( str( int( datetime.datetime.now().astimezone( time_zone ).strftime( "%d%m%Y%H%M%S%f" ) ) ) , "%d%m%Y%H%M%S%f" ).astimezone( time_zone )
+	# >>> now = datetime.datetime.now().astimezone( time_zone )
+	return math.floor( ( now - start_date_time_object ).total_seconds() )
+
+def setup_time_windows( redis_client , config ):
+	results = {}
+	time_zone = timezone( config["misc"]["time_zone"] )
+	now = datetime.datetime.now().astimezone( time_zone )
+	print( "Setting all Last Notification Times To : " )
+	print( now )
+	for index , time_window in enumerate( config["time_windows"] ):
+		time_window["id"] = hashlib.sha256( json.dumps( time_window ).encode( 'utf-8' ) ).hexdigest()
+		if "notifications" in time_window:
+			if "sms" in time_window["notifications"]:
+				time_window["notifications"]["sms"]["last_notified_time"] = {}
+				time_window["notifications"]["sms"]["last_notified_time"]["date_time_object"] = now
+			if "voice" in time_window["notifications"]:
+				time_window["notifications"]["voice"]["last_notified_time"] = {}
+				time_window["notifications"]["voice"]["last_notified_time"]["date_time_object"] = now
+		results[time_window["id"]] = time_window
+		# redis_client.set( f"{config['redis']['prefix']}.TIME_WINDOWS.{time_window['id']}" , json.dumps( time_window ) )
+	return results
 
 # def base64_decode( base64_message ):
 # 	try:
