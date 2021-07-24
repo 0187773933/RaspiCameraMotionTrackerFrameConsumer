@@ -66,10 +66,12 @@ class FrameConsumer:
 		if "sms" in self.time_windows[key]["notifications"]:
 			seconds_since_last_notification = utils.get_now_time_difference( self.timezone , self.time_windows[key]["notifications"]["sms"]["last_notified_time"]["date_time_object"] )
 			if seconds_since_last_notification < self.time_windows[key]["notifications"]["sms"]["cool_down"]:
-				print( f"Waiting [{seconds_since_last_notification}] Seconds Until Cooldown is Over" )
+				time_left = ( self.time_windows[key]["notifications"]["sms"]["cool_down"] - seconds_since_last_notification )
+				print( f"Waiting [{time_left}] Seconds Until Cooldown is Over" )
 				return
 			else:
-				print( f"It's Been {seconds_since_last_notification} Seconds Since the Last Message" )
+				over_time = ( seconds_since_last_notification - self.time_windows[key]["notifications"]["sms"]["cool_down"] )
+				print( f"It's Been {seconds_since_last_notification} Seconds Since the Last Message , Which is {over_time} Seconds Past the Cooldown Time of {self.time_windows[key]['notifications']['sms']['cool_down']} Seconds" )
 			self.time_windows[key]["notifications"]["sms"]["last_notified_time"]["date_time_object"] = datetime.datetime.now().astimezone( self.timezone )
 			# self.redis.set( f"{config['redis']['prefix']}.TIME_WINDOWS.{self.time_windows[key]['id']}" , json.dumps( self.time_windows[key] ) )
 			print( "Sending SMS Notification" )
@@ -82,10 +84,12 @@ class FrameConsumer:
 		if "voice" in self.time_windows[key]["notifications"]:
 			seconds_since_last_notification = utils.get_now_time_difference( self.timezone , self.time_windows[key]["notifications"]["voice"]["last_notified_time"]["date_time_object"] )
 			if seconds_since_last_notification < self.time_windows[key]["notifications"]["voice"]["cool_down"]:
-				print( f"Waiting [{seconds_since_last_notification}] Seconds Until Cooldown is Over" )
+				time_left = ( self.time_windows[key]["notifications"]["voice"]["cool_down"] - seconds_since_last_notification )
+				print( f"Waiting [{time_left}] Seconds Until Cooldown is Over" )
 				return
 			else:
-				print( f"It's Been {seconds_since_last_notification} Seconds Since the Last Message" )
+				over_time = ( seconds_since_last_notification - self.time_windows[key]["notifications"]["voice"]["cool_down"] )
+				print( f"It's Been {seconds_since_last_notification} Seconds Since the Last Message , Which is {over_time} Seconds Past the Cooldown Time of {self.time_windows[key]['notifications']['voice']['cool_down']} Seconds" )
 			self.time_windows[key]["notifications"]["voice"]["last_notified_time"]["date_time_object"] = datetime.datetime.now().astimezone( self.timezone )
 			# self.redis.set( f"{config['redis']['prefix']}.TIME_WINDOWS.{self.time_windows[key]['id']}" , json.dumps( self.time_windows[key] ) )
 			print( "Sending Voice Call Notification" )
@@ -114,6 +118,9 @@ class FrameConsumer:
 		most_recent_key = f'{self.config["redis"]["prefix"]}.MOTION_EVENTS.MOST_RECENT'
 		most_recent = utils.redis_get_most_recent( self.redis , most_recent_key )
 		most_recent.append( new_motion_event )
+
+		# for index , item in enumerate( most_recent ):
+		# 	print( f"{index} === {item['time_stamp']} === {item['pose_scores']['average_score']}" )
 
 		# 3.) Calculate Time Differences Between 'Most Recent' Frame and Each 'Previous' Frame in the Saved List
 		new_motion_event_time_object = utils.parse_go_time_stamp( self.timezone , json_data["time_stamp"] )

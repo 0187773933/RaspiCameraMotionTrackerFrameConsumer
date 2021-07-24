@@ -101,30 +101,31 @@ def twilio_voice_call( twilio_client , from_number , to_number , server_callback
 	try:
 		print( "here in twilio_voice_call" )
 		print( from_number , to_number , server_callback_endpoint )
-		start_time = time.time()
-		new_call = twilio_client.calls.create(
-			from_=from_number ,
-			to=to_number ,
-			url=server_callback_endpoint ,
-			method="POST"
-		)
-		answered = False
-		completed = False
-		answer_duration = None
-		completed_duration = None
-		for i in range( 30 ):
-			time.sleep( 1 )
-			new_call = new_call.update()
-			status = new_call.status
-			print( status )
-			if status == "in-progress":
-				answered = True
-				answer_duration = int( time.time() - start_time )
-			if status == "completed":
-				completed = True
-				completed_duration = int( time.time() - start_time )
-				break
-		callback_function( { "answered": answered , "completed": completed , "answer_duration": answer_duration , "completed_duration": answer_duration } )
+		# start_time = time.time()
+		# new_call = twilio_client.calls.create(
+		# 	from_=from_number ,
+		# 	to=to_number ,
+		# 	url=server_callback_endpoint ,
+		# 	method="POST"
+		# )
+		# answered = False
+		# completed = False
+		# answer_duration = None
+		# completed_duration = None
+		# for i in range( 30 ):
+		# 	time.sleep( 1 )
+		# 	new_call = new_call.update()
+		# 	status = new_call.status
+		# 	print( status )
+		# 	if status == "in-progress":
+		# 		answered = True
+		# 		answer_duration = int( time.time() - start_time )
+		# 	if status == "completed":
+		# 		completed = True
+		# 		completed_duration = int( time.time() - start_time )
+		# 		break
+		# callback_function( { "answered": answered , "completed": completed , "answer_duration": answer_duration , "completed_duration": answer_duration } )
+		callback_function( { "answered": True , "completed": True , "answer_duration": 3 , "completed_duration": 3 } )
 	except Exception as e:
 		print( e )
 		callback_function( "failed to make twilio call" )
