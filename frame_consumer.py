@@ -4,6 +4,7 @@ import redis
 import json
 import time
 from pprint import pprint
+import datetime
 from pytz import timezone
 
 # import pose
@@ -69,7 +70,7 @@ class FrameConsumer:
 				return
 			else:
 				print( f"It's Been {seconds_since_last_notification} Seconds Since the Last Message" )
-			self.time_windows[key]["notifications"]["sms"]["last_notified_time_int"] = utils.get_now_time_int( self.timezone )
+			self.time_windows[key]["notifications"]["sms"]["last_notified_time"]["date_time_object"] = datetime.datetime.now().astimezone( self.timezone )
 			# self.redis.set( f"{config['redis']['prefix']}.TIME_WINDOWS.{self.time_windows[key]['id']}" , json.dumps( self.time_windows[key] ) )
 			print( "Sending SMS Notification" )
 			utils.twilio_message(
@@ -85,7 +86,7 @@ class FrameConsumer:
 				return
 			else:
 				print( f"It's Been {seconds_since_last_notification} Seconds Since the Last Message" )
-			self.time_windows[key]["notifications"]["voice"]["last_notified_time_int"] = utils.get_now_time_int( self.timezone )
+			self.time_windows[key]["notifications"]["voice"]["last_notified_time"]["date_time_object"] = datetime.datetime.now().astimezone( self.timezone )
 			# self.redis.set( f"{config['redis']['prefix']}.TIME_WINDOWS.{self.time_windows[key]['id']}" , json.dumps( self.time_windows[key] ) )
 			print( "Sending Voice Call Notification" )
 			utils.run_in_background(

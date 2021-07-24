@@ -88,12 +88,12 @@ def twilio_message( twilio_client , from_number , to_number , message ):
 	try:
 		print( "here in twilio_message" )
 		print( from_number , to_number , message )
-		# result = twilio_client.messages.create(
-		# 	to_number ,
-		# 	from_=from_number ,
-		# 	body=message ,
-		# )
-		# return result
+		result = twilio_client.messages.create(
+			to_number ,
+			from_=from_number ,
+			body=message ,
+		)
+		return result
 	except Exception as e:
 		print ( e )
 
@@ -101,30 +101,30 @@ def twilio_voice_call( twilio_client , from_number , to_number , server_callback
 	try:
 		print( "here in twilio_voice_call" )
 		print( from_number , to_number , server_callback_endpoint )
-		# start_time = time.time()
-		# new_call = twilio_client.calls.create(
-		# 	from_=from_number ,
-		# 	to=to_number ,
-		# 	url=server_callback_endpoint ,
-		# 	method="POST"
-		# )
-		# answered = False
-		# completed = False
-		# answer_duration = None
-		# completed_duration = None
-		# for i in range( 30 ):
-		# 	time.sleep( 1 )
-		# 	new_call = new_call.update()
-		# 	status = new_call.status
-		# 	print( status )
-		# 	if status == "in-progress":
-		# 		answered = True
-		# 		answer_duration = int( time.time() - start_time )
-		# 	if status == "completed":
-		# 		completed = True
-		# 		completed_duration = int( time.time() - start_time )
-		# 		break
-		# callback_function( { "answered": answered , "completed": completed , "answer_duration": answer_duration , "completed_duration": answer_duration } )
+		start_time = time.time()
+		new_call = twilio_client.calls.create(
+			from_=from_number ,
+			to=to_number ,
+			url=server_callback_endpoint ,
+			method="POST"
+		)
+		answered = False
+		completed = False
+		answer_duration = None
+		completed_duration = None
+		for i in range( 30 ):
+			time.sleep( 1 )
+			new_call = new_call.update()
+			status = new_call.status
+			print( status )
+			if status == "in-progress":
+				answered = True
+				answer_duration = int( time.time() - start_time )
+			if status == "completed":
+				completed = True
+				completed_duration = int( time.time() - start_time )
+				break
+		callback_function( { "answered": answered , "completed": completed , "answer_duration": answer_duration , "completed_duration": answer_duration } )
 	except Exception as e:
 		print( e )
 		callback_function( "failed to make twilio call" )
@@ -152,10 +152,9 @@ def get_now_time_int( time_zone ):
 	now = datetime.datetime.now().astimezone( time_zone )
 	return int( now.strftime( "%d%m%Y%H%M%S%f" ) )
 
+
 def get_now_time_difference( time_zone , start_date_time_object ):
-	print( start_date_time_object )
 	now = datetime.datetime.now().astimezone( time_zone )
-	print( now )
 	# >>> start = datetime.datetime.strptime( str( int( datetime.datetime.now().astimezone( time_zone ).strftime( "%d%m%Y%H%M%S%f" ) ) ) , "%d%m%Y%H%M%S%f" ).astimezone( time_zone )
 	# >>> now = datetime.datetime.now().astimezone( time_zone )
 	return math.floor( ( now - start_date_time_object ).total_seconds() )
