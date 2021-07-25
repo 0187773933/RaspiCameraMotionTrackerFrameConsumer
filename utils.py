@@ -87,8 +87,6 @@ def parse_go_time_stamp( time_zone , time_stamp ):
 # https://github.com/twilio/twilio-python/blob/19e64ad50f5ae1110e0059ad2b2e960b461b9e8c/twilio/rest/api/v2010/account/message/__init__.py#L396
 def twilio_message( twilio_client , from_number , to_number , message , callback_function ):
 	try:
-		print( "here in twilio_message" )
-		print( from_number , to_number , message )
 		start_time = time.time()
 		result = twilio_client.messages.create(
 			to_number ,
@@ -110,8 +108,6 @@ def twilio_message( twilio_client , from_number , to_number , message , callback
 
 def twilio_voice_call( twilio_client , from_number , to_number , server_callback_endpoint , callback_function ):
 	try:
-		print( "here in twilio_voice_call" )
-		print( from_number , to_number , server_callback_endpoint )
 		start_time = time.time()
 		new_call = twilio_client.calls.create(
 			from_=from_number ,
@@ -165,6 +161,12 @@ def get_now_time_int( time_zone ):
 	now = datetime.datetime.now().astimezone( time_zone )
 	return int( now.strftime( "%d%m%Y%H%M%S%f" ) )
 
+def get_common_time_string( time_zone ):
+	now = datetime.datetime.now().astimezone( time_zone )
+	milliseconds = round( now.microsecond / 1000 )
+	now_string = now.strftime( "%d%b%Y === %H:%M:%S" ).upper()
+	return f"{now_string}.{milliseconds}"
+
 
 def get_now_time_difference( time_zone , start_date_time_object ):
 	now = datetime.datetime.now().astimezone( time_zone )
@@ -177,8 +179,6 @@ def setup_time_windows( redis_client , config ):
 	time_zone = timezone( config["misc"]["time_zone"] )
 	now = datetime.datetime.now().astimezone( time_zone )
 	now = now - datetime.timedelta( hours=0 , minutes=0 , seconds=180 )
-	print( "Setting all Last Notification Times To : " )
-	print( now )
 	for index , time_window in enumerate( config["time_windows"] ):
 		time_window["id"] = hashlib.sha256( json.dumps( time_window ).encode( 'utf-8' ) ).hexdigest()
 		if "notifications" in time_window:

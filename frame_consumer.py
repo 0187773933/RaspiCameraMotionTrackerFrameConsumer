@@ -25,8 +25,12 @@ class FrameConsumer:
 		self.twilio_client = utils.setup_twilio_client( self.config["twilio"] )
 		self.time_windows = utils.setup_time_windows( self.redis , self.config )
 	def on_shutdown( self , signal ):
-		print( f"Frame Consumer Shutting Down === {str(signal)}" )
+		self.log( f"Frame Consumer Shutting Down === {str(signal)}" )
 		sys.exit( 1 )
+
+	def log( self , message ):
+		time_string_prefix = utils.get_common_time_string( self.timezone )
+		print( f"{time_string_prefix} === {message}" )
 
 	# Server Stuff
 	async def route_home( self , request ):
@@ -40,7 +44,7 @@ class FrameConsumer:
 			asleep_or_awake_decision = await self.decide( request.json )
 			return response.json( { "result": "success" , "message": "successfully received and processed image" , "decision": asleep_or_awake_decision } )
 		except Exception as e:
-			print( e )
+			self.log( e )
 			return response.text( f"failed === {str(e)}" )
 	def init_server( self ):
 		self.server = Sanic( name="Motion Alarm - Motion Frame Consumer Server" )
@@ -51,30 +55,30 @@ class FrameConsumer:
 		self.server.add_route( self.route_process , "/process" , methods=[ "POST" ] )
 	def start_server( self ):
 		self.init_server()
-		print( f"Starting On === http://{self.config['server']['host']}:{self.config['server']['port']}" )
+		self.log( f"Starting On === http://{self.config['server']['host']}:{self.config['server']['port']}" )
 		self.server.run( host=self.config['server']['host'] , port=self.config['server']['port'] )
 
 	def on_sms_finished( self , result ):
-		print( "SMS Notification Callback()" )
-		print( result )
+		self.log( "SMS Notification Callback()" )
+		self.log( result )
 
 	def on_voice_call_finished( self , result ):
-		print( "Voice Notification Callback()" )
-		print( result )
+		self.log( "Voice Notification Callback()" )
+		self.log( result )
 
 	def send_sms_notification( self , new_motion_event , key ):
-		print( "=== SMS Alert ===" )
+		self.log( "=== SMS Alert ===" )
 		seconds_since_last_notification = utils.get_now_time_difference( self.timezone , self.time_windows[key]["notifications"]["sms"]["last_notified_time"]["date_time_object"] )
 		if seconds_since_last_notification < self.time_windows[key]["notifications"]["sms"]["cool_down"]:
 			time_left = ( self.time_windows[key]["notifications"]["sms"]["cool_down"] - seconds_since_last_notification )
-			print( f"Waiting [{time_left}] Seconds Until Cooldown is Over" )
+			self.log( f"Waiting [{time_left}] Seconds Until Cooldown is Over" )
 			return
 		else:
 			over_time = ( seconds_since_last_notification - self.time_windows[key]["notifications"]["sms"]["cool_down"] )
-			print( f"It's Been {seconds_since_last_notification} Seconds Since the Last Message , Which is {over_time} Seconds Past the Cooldown Time of {self.time_windows[key]['notifications']['sms']['cool_down']} Seconds" )
+			self.log( f"It's Been {seconds_since_last_notification} Seconds Since the Last Message , Which is {over_time} Seconds Past the Cooldown Time of {self.time_windows[key]['notifications']['sms']['cool_down']} Seconds" )
 		self.time_windows[key]["notifications"]["sms"]["last_notified_time"]["date_time_object"] = datetime.datetime.now().astimezone( self.timezone )
 		# self.redis.set( f"{config['redis']['prefix']}.TIME_WINDOWS.{self.time_windows[key]['id']}" , json.dumps( self.time_windows[key] ) )
-		print( "Sending SMS Notification" )
+		self.log( "Sending SMS Notification" )
 		utils.run_in_background(
 			utils.twilio_message ,
 			self.twilio_client ,
@@ -85,18 +89,18 @@ class FrameConsumer:
 		)
 
 	def send_voice_notification( self , now_motion_event , key ):
-		print( "=== Voice Alert ===" )
+		self.log( "=== Voice Alert ===" )
 		seconds_since_last_notification = utils.get_now_time_difference( self.timezone , self.time_windows[key]["notifications"]["voice"]["last_notified_time"]["date_time_object"] )
 		if seconds_since_last_notification < self.time_windows[key]["notifications"]["voice"]["cool_down"]:
 			time_left = ( self.time_windows[key]["notifications"]["voice"]["cool_down"] - seconds_since_last_notification )
-			print( f"Waiting [{time_left}] Seconds Until Cooldown is Over" )
+			self.log( f"Waiting [{time_left}] Seconds Until Cooldown is Over" )
 			return
 		else:
 			over_time = ( seconds_since_last_notification - self.time_windows[key]["notifications"]["voice"]["cool_down"] )
-			print( f"It's Been {seconds_since_last_notification} Seconds Since the Last Message , Which is {over_time} Seconds Past the Cooldown Time of {self.time_windows[key]['notifications']['voice']['cool_down']} Seconds" )
+			self.log( f"It's Been {seconds_since_last_notification} Seconds Since the Last Message , Which is {over_time} Seconds Past the Cooldown Time of {self.time_windows[key]['notifications']['voice']['cool_down']} Seconds" )
 		self.time_windows[key]["notifications"]["voice"]["last_notified_time"]["date_time_object"] = datetime.datetime.now().astimezone( self.timezone )
 		# self.redis.set( f"{config['redis']['prefix']}.TIME_WINDOWS.{self.time_windows[key]['id']}" , json.dumps( self.time_windows[key] ) )
-		print( "Sending Voice Call Notification" )
+		self.log( "Sending Voice Call Notification" )
 		utils.run_in_background(
 			utils.twilio_voice_call ,
 			self.twilio_client ,
@@ -108,9 +112,9 @@ class FrameConsumer:
 
 	def send_notifications( self , new_motion_event , key ):
 		if "notifications" not in self.time_windows[key]:
-			print( "No Notification Info Provided" )
+			self.log( "No Notification Info Provided" )
 			return
-		# pprint( self.time_windows[key] )
+		# pself.log( self.time_windows[key] )
 		if "sms" in self.time_windows[key]["notifications"]:
 			self.send_sms_notification( new_motion_event , key )
 		if "voice" in self.time_windows[key]["notifications"]:
@@ -134,7 +138,7 @@ class FrameConsumer:
 		most_recent.append( new_motion_event )
 
 		# for index , item in enumerate( most_recent ):
-		# 	print( f"{index} === {item['time_stamp']} === {item['pose_scores']['average_score']}" )
+		# 	self.log( f"{index} === {item['time_stamp']} === {item['pose_scores']['average_score']}" )
 
 		# 3.) Calculate Time Differences Between 'Most Recent' Frame and Each 'Previous' Frame in the Saved List
 		new_motion_event_time_object = utils.parse_go_time_stamp( self.timezone , json_data["time_stamp"] )
@@ -159,15 +163,15 @@ class FrameConsumer:
 			# pose_average = ( pose_sum / float( len( most_recent ) ) )
 			pose_average = ( pose_sum / float( self.time_windows[key]["pose"]["total_events_to_pull_from"] ) )
 			if motion_events > self.time_windows[key]['motion']['max_events']:
-				print( f"Total Motion Events in the Previous {self.time_windows[key]['seconds']} Seconds : {motion_events} === Is GREATER than the defined maximum of {self.time_windows[key]['motion']['max_events']} events" )
+				self.log( f"Total Motion Events in the Previous {self.time_windows[key]['seconds']} Seconds : {motion_events} === Is GREATER than the defined maximum of {self.time_windows[key]['motion']['max_events']} events" )
 				if pose_average >= self.time_windows[key]['pose']['minimum_moving_average']:
-					print( f"Moving Pose Score Average : {pose_average} is GREATER than defined Minimum Moving Average of {self.time_windows[key]['pose']['minimum_moving_average']}" )
+					self.log( f"Moving Pose Score Average : {pose_average} is GREATER than defined Minimum Moving Average of {self.time_windows[key]['pose']['minimum_moving_average']}" )
 					new_motion_event["awake"] = True
 					self.send_notifications( new_motion_event , key )
 				else:
-					print( f"Moving Pose Score Average : {pose_average} is LESS than defined Minimum Moving Average of {self.time_windows[key]['pose']['minimum_moving_average']}" )
+					self.log( f"Moving Pose Score Average : {pose_average} is LESS than defined Minimum Moving Average of {self.time_windows[key]['pose']['minimum_moving_average']}" )
 			else:
-				print( f"Total Motion Events in the Previous {self.time_windows[key]['seconds']} Seconds : {motion_events} === Is LESS than the defined maximum of {self.time_windows[key]['motion']['max_events']} events" )
+				self.log( f"Total Motion Events in the Previous {self.time_windows[key]['seconds']} Seconds : {motion_events} === Is LESS than the defined maximum of {self.time_windows[key]['motion']['max_events']} events" )
 
 		# 5.) Store Most Recent Array Back into DB
 		if len( most_recent ) > self.config["misc"]["most_recent_motion_events_total"]:
