@@ -62,53 +62,59 @@ class FrameConsumer:
 		print( "Voice Notification Callback()" )
 		print( result )
 
-	def send_notification( self , new_motion_event , key ):
+	def send_sms_notification( self , new_motion_event , key ):
+		print( "=== SMS Alert ===" )
+		seconds_since_last_notification = utils.get_now_time_difference( self.timezone , self.time_windows[key]["notifications"]["sms"]["last_notified_time"]["date_time_object"] )
+		if seconds_since_last_notification < self.time_windows[key]["notifications"]["sms"]["cool_down"]:
+			time_left = ( self.time_windows[key]["notifications"]["sms"]["cool_down"] - seconds_since_last_notification )
+			print( f"Waiting [{time_left}] Seconds Until Cooldown is Over" )
+			return
+		else:
+			over_time = ( seconds_since_last_notification - self.time_windows[key]["notifications"]["sms"]["cool_down"] )
+			print( f"It's Been {seconds_since_last_notification} Seconds Since the Last Message , Which is {over_time} Seconds Past the Cooldown Time of {self.time_windows[key]['notifications']['sms']['cool_down']} Seconds" )
+		self.time_windows[key]["notifications"]["sms"]["last_notified_time"]["date_time_object"] = datetime.datetime.now().astimezone( self.timezone )
+		# self.redis.set( f"{config['redis']['prefix']}.TIME_WINDOWS.{self.time_windows[key]['id']}" , json.dumps( self.time_windows[key] ) )
+		print( "Sending SMS Notification" )
+		utils.run_in_background(
+			utils.twilio_message ,
+			self.twilio_client ,
+			self.time_windows[key]["notifications"]["sms"]["from_number"] ,
+			self.time_windows[key]["notifications"]["sms"]["to_number"] ,
+			f'{self.time_windows[key]["notifications"]["sms"]["message_prefix"]} @@ {new_motion_event["date_time_string"]}' ,
+			self.on_sms_finished
+		)
+
+	def send_voice_notification( self , now_motion_event , key ):
+		print( "=== Voice Alert ===" )
+		seconds_since_last_notification = utils.get_now_time_difference( self.timezone , self.time_windows[key]["notifications"]["voice"]["last_notified_time"]["date_time_object"] )
+		if seconds_since_last_notification < self.time_windows[key]["notifications"]["voice"]["cool_down"]:
+			time_left = ( self.time_windows[key]["notifications"]["voice"]["cool_down"] - seconds_since_last_notification )
+			print( f"Waiting [{time_left}] Seconds Until Cooldown is Over" )
+			return
+		else:
+			over_time = ( seconds_since_last_notification - self.time_windows[key]["notifications"]["voice"]["cool_down"] )
+			print( f"It's Been {seconds_since_last_notification} Seconds Since the Last Message , Which is {over_time} Seconds Past the Cooldown Time of {self.time_windows[key]['notifications']['voice']['cool_down']} Seconds" )
+		self.time_windows[key]["notifications"]["voice"]["last_notified_time"]["date_time_object"] = datetime.datetime.now().astimezone( self.timezone )
+		# self.redis.set( f"{config['redis']['prefix']}.TIME_WINDOWS.{self.time_windows[key]['id']}" , json.dumps( self.time_windows[key] ) )
+		print( "Sending Voice Call Notification" )
+		utils.run_in_background(
+			utils.twilio_voice_call ,
+			self.twilio_client ,
+			self.time_windows[key]["notifications"]["voice"]["from_number"] ,
+			self.time_windows[key]["notifications"]["voice"]["to_number"] ,
+			self.time_windows[key]["notifications"]["voice"]["callback_url"] ,
+			self.on_voice_call_finished
+		)
+
+	def send_notifications( self , new_motion_event , key ):
 		if "notifications" not in self.time_windows[key]:
 			print( "No Notification Info Provided" )
 			return
 		# pprint( self.time_windows[key] )
 		if "sms" in self.time_windows[key]["notifications"]:
-			print( "=== SMS Alert ===" )
-			seconds_since_last_notification = utils.get_now_time_difference( self.timezone , self.time_windows[key]["notifications"]["sms"]["last_notified_time"]["date_time_object"] )
-			if seconds_since_last_notification < self.time_windows[key]["notifications"]["sms"]["cool_down"]:
-				time_left = ( self.time_windows[key]["notifications"]["sms"]["cool_down"] - seconds_since_last_notification )
-				print( f"Waiting [{time_left}] Seconds Until Cooldown is Over" )
-				return
-			else:
-				over_time = ( seconds_since_last_notification - self.time_windows[key]["notifications"]["sms"]["cool_down"] )
-				print( f"It's Been {seconds_since_last_notification} Seconds Since the Last Message , Which is {over_time} Seconds Past the Cooldown Time of {self.time_windows[key]['notifications']['sms']['cool_down']} Seconds" )
-			self.time_windows[key]["notifications"]["sms"]["last_notified_time"]["date_time_object"] = datetime.datetime.now().astimezone( self.timezone )
-			# self.redis.set( f"{config['redis']['prefix']}.TIME_WINDOWS.{self.time_windows[key]['id']}" , json.dumps( self.time_windows[key] ) )
-			print( "Sending SMS Notification" )
-			utils.run_in_background(
-				utils.twilio_message ,
-				self.twilio_client ,
-				self.time_windows[key]["notifications"]["sms"]["from_number"] ,
-				self.time_windows[key]["notifications"]["sms"]["to_number"] ,
-				f'{self.time_windows[key]["notifications"]["sms"]["message_prefix"]} @@ {new_motion_event["date_time_string"]}' ,
-				self.on_sms_finished
-			)
+			self.send_sms_notification( new_motion_event , key )
 		if "voice" in self.time_windows[key]["notifications"]:
-			print( "=== Voice Alert ===" )
-			seconds_since_last_notification = utils.get_now_time_difference( self.timezone , self.time_windows[key]["notifications"]["voice"]["last_notified_time"]["date_time_object"] )
-			if seconds_since_last_notification < self.time_windows[key]["notifications"]["voice"]["cool_down"]:
-				time_left = ( self.time_windows[key]["notifications"]["voice"]["cool_down"] - seconds_since_last_notification )
-				print( f"Waiting [{time_left}] Seconds Until Cooldown is Over" )
-				return
-			else:
-				over_time = ( seconds_since_last_notification - self.time_windows[key]["notifications"]["voice"]["cool_down"] )
-				print( f"It's Been {seconds_since_last_notification} Seconds Since the Last Message , Which is {over_time} Seconds Past the Cooldown Time of {self.time_windows[key]['notifications']['voice']['cool_down']} Seconds" )
-			self.time_windows[key]["notifications"]["voice"]["last_notified_time"]["date_time_object"] = datetime.datetime.now().astimezone( self.timezone )
-			# self.redis.set( f"{config['redis']['prefix']}.TIME_WINDOWS.{self.time_windows[key]['id']}" , json.dumps( self.time_windows[key] ) )
-			print( "Sending Voice Call Notification" )
-			utils.run_in_background(
-				utils.twilio_voice_call ,
-				self.twilio_client ,
-				self.time_windows[key]["notifications"]["voice"]["from_number"] ,
-				self.time_windows[key]["notifications"]["voice"]["to_number"] ,
-				self.time_windows[key]["notifications"]["voice"]["callback_url"] ,
-				self.on_voice_call_finished
-			)
+			self.send_voice_notification( new_motion_event , key )
 
 	# Actual Logic
 	async def decide( self , json_data ):
@@ -157,7 +163,7 @@ class FrameConsumer:
 				if pose_average >= self.time_windows[key]['pose']['minimum_moving_average']:
 					print( f"Moving Pose Score Average : {pose_average} is GREATER than defined Minimum Moving Average of {self.time_windows[key]['pose']['minimum_moving_average']}" )
 					new_motion_event["awake"] = True
-					self.send_notification( new_motion_event , key )
+					self.send_notifications( new_motion_event , key )
 				else:
 					print( f"Moving Pose Score Average : {pose_average} is LESS than defined Minimum Moving Average of {self.time_windows[key]['pose']['minimum_moving_average']}" )
 			else:
