@@ -83,17 +83,28 @@ def parse_go_time_stamp( time_zone , time_stamp ):
 		"milliseconds": milliseconds ,
 	}
 
-
-def twilio_message( twilio_client , from_number , to_number , message ):
+# apparently this is how you do class composition in python
+# https://github.com/twilio/twilio-python/blob/19e64ad50f5ae1110e0059ad2b2e960b461b9e8c/twilio/rest/api/v2010/account/message/__init__.py#L396
+def twilio_message( twilio_client , from_number , to_number , message , callback_function ):
 	try:
 		print( "here in twilio_message" )
 		print( from_number , to_number , message )
+		start_time = time.time()
 		result = twilio_client.messages.create(
 			to_number ,
 			from_=from_number ,
 			body=message ,
 		)
-		return result
+		result = result.fetch()
+		completed_duration = False
+		for i in range( 10 ):
+			time.sleep( 1 )
+			result = result.fetch()
+			if result.status == "delivered":
+				completed_duration = int( time.time() - start_time )
+				break
+		callback_function( { "result": result.status , "completed_duration": completed_duration } )
+		return
 	except Exception as e:
 		print ( e )
 
@@ -101,31 +112,32 @@ def twilio_voice_call( twilio_client , from_number , to_number , server_callback
 	try:
 		print( "here in twilio_voice_call" )
 		print( from_number , to_number , server_callback_endpoint )
-		# start_time = time.time()
-		# new_call = twilio_client.calls.create(
-		# 	from_=from_number ,
-		# 	to=to_number ,
-		# 	url=server_callback_endpoint ,
-		# 	method="POST"
-		# )
-		# answered = False
-		# completed = False
-		# answer_duration = None
-		# completed_duration = None
-		# for i in range( 30 ):
-		# 	time.sleep( 1 )
-		# 	new_call = new_call.update()
-		# 	status = new_call.status
-		# 	print( status )
-		# 	if status == "in-progress":
-		# 		answered = True
-		# 		answer_duration = int( time.time() - start_time )
-		# 	if status == "completed":
-		# 		completed = True
-		# 		completed_duration = int( time.time() - start_time )
-		# 		break
-		# callback_function( { "answered": answered , "completed": completed , "answer_duration": answer_duration , "completed_duration": answer_duration } )
-		callback_function( { "answered": True , "completed": True , "answer_duration": 3 , "completed_duration": 3 } )
+		start_time = time.time()
+		new_call = twilio_client.calls.create(
+			from_=from_number ,
+			to=to_number ,
+			url=server_callback_endpoint ,
+			method="POST"
+		)
+		answered = False
+		completed = False
+		answer_duration = None
+		completed_duration = None
+		for i in range( 30 ):
+			time.sleep( 1 )
+			new_call = new_call.update()
+			status = new_call.status
+			print( status )
+			if status == "in-progress":
+				answered = True
+				answer_duration = int( time.time() - start_time )
+			if status == "completed":
+				completed = True
+				completed_duration = int( time.time() - start_time )
+				break
+		callback_function( { "answered": answered , "completed": completed , "answer_duration": answer_duration , "completed_duration": completed_duration } )
+		# callback_function( { "answered": True , "completed": True , "answer_duration": 3 , "completed_duration": 3 } )
+		return
 	except Exception as e:
 		print( e )
 		callback_function( "failed to make twilio call" )
@@ -164,6 +176,7 @@ def setup_time_windows( redis_client , config ):
 	results = {}
 	time_zone = timezone( config["misc"]["time_zone"] )
 	now = datetime.datetime.now().astimezone( time_zone )
+	now = now - datetime.timedelta( hours=0 , minutes=0 , seconds=180 )
 	print( "Setting all Last Notification Times To : " )
 	print( now )
 	for index , time_window in enumerate( config["time_windows"] ):

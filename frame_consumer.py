@@ -54,8 +54,12 @@ class FrameConsumer:
 		print( f"Starting On === http://{self.config['server']['host']}:{self.config['server']['port']}" )
 		self.server.run( host=self.config['server']['host'] , port=self.config['server']['port'] )
 
-	def on_notification_finished( self , result ):
-		print( "Notification Callback()" )
+	def on_sms_finished( self , result ):
+		print( "SMS Notification Callback()" )
+		print( result )
+
+	def on_voice_call_finished( self , result ):
+		print( "Voice Notification Callback()" )
 		print( result )
 
 	def send_notification( self , new_motion_event , key ):
@@ -64,6 +68,7 @@ class FrameConsumer:
 			return
 		# pprint( self.time_windows[key] )
 		if "sms" in self.time_windows[key]["notifications"]:
+			print( "=== SMS Alert ===" )
 			seconds_since_last_notification = utils.get_now_time_difference( self.timezone , self.time_windows[key]["notifications"]["sms"]["last_notified_time"]["date_time_object"] )
 			if seconds_since_last_notification < self.time_windows[key]["notifications"]["sms"]["cool_down"]:
 				time_left = ( self.time_windows[key]["notifications"]["sms"]["cool_down"] - seconds_since_last_notification )
@@ -75,13 +80,16 @@ class FrameConsumer:
 			self.time_windows[key]["notifications"]["sms"]["last_notified_time"]["date_time_object"] = datetime.datetime.now().astimezone( self.timezone )
 			# self.redis.set( f"{config['redis']['prefix']}.TIME_WINDOWS.{self.time_windows[key]['id']}" , json.dumps( self.time_windows[key] ) )
 			print( "Sending SMS Notification" )
-			utils.twilio_message(
+			utils.run_in_background(
+				utils.twilio_message ,
 				self.twilio_client ,
 				self.time_windows[key]["notifications"]["sms"]["from_number"] ,
 				self.time_windows[key]["notifications"]["sms"]["to_number"] ,
 				f'{self.time_windows[key]["notifications"]["sms"]["message_prefix"]} @@ {new_motion_event["date_time_string"]}' ,
+				self.on_sms_finished
 			)
 		if "voice" in self.time_windows[key]["notifications"]:
+			print( "=== Voice Alert ===" )
 			seconds_since_last_notification = utils.get_now_time_difference( self.timezone , self.time_windows[key]["notifications"]["voice"]["last_notified_time"]["date_time_object"] )
 			if seconds_since_last_notification < self.time_windows[key]["notifications"]["voice"]["cool_down"]:
 				time_left = ( self.time_windows[key]["notifications"]["voice"]["cool_down"] - seconds_since_last_notification )
@@ -99,7 +107,7 @@ class FrameConsumer:
 				self.time_windows[key]["notifications"]["voice"]["from_number"] ,
 				self.time_windows[key]["notifications"]["voice"]["to_number"] ,
 				self.time_windows[key]["notifications"]["voice"]["callback_url"] ,
-				self.on_notification_finished
+				self.on_voice_call_finished
 			)
 
 	# Actual Logic
@@ -125,7 +133,8 @@ class FrameConsumer:
 		# 3.) Calculate Time Differences Between 'Most Recent' Frame and Each 'Previous' Frame in the Saved List
 		new_motion_event_time_object = utils.parse_go_time_stamp( self.timezone , json_data["time_stamp"] )
 		new_motion_event["date_time_string"] = new_motion_event_time_object["date_time_string"]
-		time_objects = [ utils.parse_go_time_stamp( self.timezone , x['time_stamp'] ) for x in most_recent[0:-1] ]
+		# time_objects = [ utils.parse_go_time_stamp( self.timezone , x['time_stamp'] ) for x in most_recent[0:-1] ]
+		time_objects = [ utils.parse_go_time_stamp( self.timezone , x['time_stamp'] ) for x in most_recent ]
 		seconds_between_new_motion_event_and_previous_events = [ int( ( new_motion_event_time_object["date_time_object"] - x["date_time_object"] ).total_seconds() ) for x in time_objects ]
 
 		# 4.) Tally Total Motion Events in Each Configed Time Window
