@@ -4,6 +4,7 @@ import signal
 import redis
 import json
 import time
+import math
 from pprint import pprint
 import datetime
 from pytz import timezone
@@ -12,7 +13,7 @@ import threading
 
 # import pose
 import pose_light
-import utils
+# import utils
 
 from sanic import Sanic
 from sanic.response import json as sanic_json
@@ -34,8 +35,15 @@ class FrameConsumer:
 		self.log( f"Frame Consumer Shutting Down === {str(signal)}" )
 		sys.exit( 1 )
 
+	def get_common_time_string( self ):
+		now = datetime.datetime.now().astimezone( self.timezone )
+		milliseconds = round( now.microsecond / 1000 )
+		milliseconds = str( milliseconds ).zfill( 3 )
+		now_string = now.strftime( "%d%b%Y === %H:%M:%S" ).upper()
+		return f"{now_string}.{milliseconds}"
+
 	def log( self , message ):
-		time_string_prefix = utils.get_common_time_string( self.timezone )
+		time_string_prefix = self.get_common_time_string()
 		print( f"{time_string_prefix} === {message}" )
 
 	def read_json( self , file_path ):
@@ -43,6 +51,7 @@ class FrameConsumer:
 			return json.load( f )
 
 	def setup_environment( self ):
+		self.most_recent_key = f'{self.config["redis"]["prefix"]}.MOTION_EVENTS.MOST_RECENT'
 		os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 	def setup_signal_handlers( self ):
@@ -87,6 +96,10 @@ class FrameConsumer:
 	def run_in_background( self , function_pointer , *args , **kwargs ):
 		t = threading.Thread( target=function_pointer , args=args , kwargs=kwargs , daemon=True )
 		t.start()
+
+	def get_now_time_difference( self , start_date_time_object ):
+		now = datetime.datetime.now().astimezone( self.timezone )
+		return math.floor( ( now - start_date_time_object ).total_seconds() )
 
 	# Server Stuff
 	async def route_home( self , request ):
@@ -176,7 +189,7 @@ class FrameConsumer:
 
 	def send_sms_notification( self , new_motion_event , key ):
 		self.log( "=== SMS Alert ===" )
-		seconds_since_last_notification = utils.get_now_time_difference( self.timezone , self.time_windows[key]["notifications"]["sms"]["last_notified_time"]["date_time_object"] )
+		seconds_since_last_notification = self.get_now_time_difference( self.time_windows[key]["notifications"]["sms"]["last_notified_time"]["date_time_object"] )
 		if seconds_since_last_notification < self.time_windows[key]["notifications"]["sms"]["cool_down"]:
 			time_left = ( self.time_windows[key]["notifications"]["sms"]["cool_down"] - seconds_since_last_notification )
 			self.log( f"Waiting [{time_left}] Seconds Until Cooldown is Over" )
@@ -196,7 +209,7 @@ class FrameConsumer:
 
 	def send_voice_notification( self , now_motion_event , key ):
 		self.log( "=== Voice Alert ===" )
-		seconds_since_last_notification = utils.get_now_time_difference( self.timezone , self.time_windows[key]["notifications"]["voice"]["last_notified_time"]["date_time_object"] )
+		seconds_since_last_notification = self.get_now_time_difference( self.time_windows[key]["notifications"]["voice"]["last_notified_time"]["date_time_object"] )
 		if seconds_since_last_notification < self.time_windows[key]["notifications"]["voice"]["cool_down"]:
 			time_left = ( self.time_windows[key]["notifications"]["voice"]["cool_down"] - seconds_since_last_notification )
 			self.log( f"Waiting [{time_left}] Seconds Until Cooldown is Over" )
@@ -224,6 +237,38 @@ class FrameConsumer:
 		if "voice" in self.time_windows[key]["notifications"]:
 			self.send_voice_notification( new_motion_event , key )
 
+	def redis_get_most_recent( self ):
+		most_recent = self.redis.get( self.most_recent_key )
+		if most_recent == None:
+			most_recent = []
+		else:
+			most_recent = json.loads( most_recent )
+		return most_recent
+
+	def parse_go_time_stamp( self , time_stamp ):
+		time_object = datetime.datetime.strptime( time_stamp , "%d%b%Y === %H:%M:%S.%f" ).astimezone( self.timezone )
+		items = time_stamp.split( " === " )
+		if len( items ) < 2:
+			return False
+		date = items[ 0 ]
+		x_time = items[ 1 ]
+		time_items = x_time.split( "." )
+		milliseconds = time_items[ 1 ]
+		time_items = time_items[ 0 ].split( ":" )
+		hours = time_items[ 0 ]
+		minutes = time_items[ 1 ]
+		seconds = time_items[ 2 ]
+		return {
+			"date_time_object": time_object ,
+			"date_time_string": f"{date} === {hours}:{minutes}:{seconds}.{milliseconds}" ,
+			"date": date ,
+			"hours": hours ,
+			"minutes": minutes ,
+			"seconds": seconds ,
+			"milliseconds": milliseconds ,
+		}
+
+
 	# Actual Logic
 	async def decide( self , json_data ):
 
@@ -239,18 +284,18 @@ class FrameConsumer:
 		new_motion_event["pose_scores"] = await pose_light.process_opencv_frame( json_data )
 
 		# 2.) Get 'Most Recent' Array of Motion Events
-		most_recent_key = f'{self.config["redis"]["prefix"]}.MOTION_EVENTS.MOST_RECENT'
-		most_recent = utils.redis_get_most_recent( self.redis , most_recent_key )
+
+		most_recent = self.redis_get_most_recent()
 		most_recent.append( new_motion_event )
 
 		# for index , item in enumerate( most_recent ):
 		# 	self.log( f"{index} === {item['time_stamp']} === {item['pose_scores']['average_score']}" )
 
 		# 3.) Calculate Time Differences Between 'Most Recent' Frame and Each 'Previous' Frame in the Saved List
-		new_motion_event_time_object = utils.parse_go_time_stamp( self.timezone , json_data["time_stamp"] )
+		new_motion_event_time_object = self.parse_go_time_stamp( json_data["time_stamp"] )
 		new_motion_event["date_time_string"] = new_motion_event_time_object["date_time_string"]
 		# time_objects = [ utils.parse_go_time_stamp( self.timezone , x['time_stamp'] ) for x in most_recent[0:-1] ]
-		time_objects = [ utils.parse_go_time_stamp( self.timezone , x['time_stamp'] ) for x in most_recent ]
+		time_objects = [ self.parse_go_time_stamp( x['time_stamp'] ) for x in most_recent ]
 		seconds_between_new_motion_event_and_previous_events = [ int( ( new_motion_event_time_object["date_time_object"] - x["date_time_object"] ).total_seconds() ) for x in time_objects ]
 
 		# 4.) Tally Total Motion Events in Each Configed Time Window
@@ -282,7 +327,7 @@ class FrameConsumer:
 		# 5.) Store Most Recent Array Back into DB
 		if len( most_recent ) > self.config["misc"]["most_recent_motion_events_total"]:
 			most_recent.pop( 0 )
-		self.redis.set( most_recent_key , json.dumps( most_recent ) )
+		self.redis.set( self.most_recent_key , json.dumps( most_recent ) )
 		return new_motion_event
 
 	def Start( self ):
