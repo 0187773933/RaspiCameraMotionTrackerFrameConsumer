@@ -131,7 +131,7 @@ class FrameConsumer:
 		self.server.add_route( self.route_process , "/process" , methods=[ "POST" ] )
 	def start_server( self ):
 		self.init_server()
-		self.log( f"Starting On === http://{self.config['server']['host']}:{self.config['server']['port']}" )
+		self.log( f"Frame Consumer ONLINE === http://{self.config['server']['host']}:{self.config['server']['port']}" )
 		self.server.run( host=self.config['server']['host'] , port=self.config['server']['port'] )
 
 	def on_sms_finished( self , result ):
