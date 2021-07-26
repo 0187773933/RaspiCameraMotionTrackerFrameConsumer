@@ -164,6 +164,7 @@ def get_now_time_int( time_zone ):
 def get_common_time_string( time_zone ):
 	now = datetime.datetime.now().astimezone( time_zone )
 	milliseconds = round( now.microsecond / 1000 )
+	milliseconds = str( milliseconds ).zfill( 3 )
 	now_string = now.strftime( "%d%b%Y === %H:%M:%S" ).upper()
 	return f"{now_string}.{milliseconds}"
 

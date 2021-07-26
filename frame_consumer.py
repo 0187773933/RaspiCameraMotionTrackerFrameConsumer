@@ -1,11 +1,14 @@
 import os
 import sys
+import signal
 import redis
 import json
 import time
 from pprint import pprint
 import datetime
 from pytz import timezone
+import hashlib
+import threading
 
 # import pose
 import pose_light
@@ -15,15 +18,18 @@ from sanic import Sanic
 from sanic.response import json as sanic_json
 from sanic import response
 
+from twilio.rest import Client
+
 class FrameConsumer:
 	def __init__( self ):
-		self.config = utils.read_json( sys.argv[ 1 ] )
+		self.config = self.read_json( sys.argv[ 1 ] )
 		self.timezone = timezone( self.config["misc"]["time_zone"] )
-		utils.setup_environment()
-		utils.setup_signal_handlers( self.on_shutdown )
-		self.redis = utils.setup_redis_connection( self.config["redis"] )
-		self.twilio_client = utils.setup_twilio_client( self.config["twilio"] )
-		self.time_windows = utils.setup_time_windows( self.redis , self.config )
+		self.setup_environment()
+		self.setup_signal_handlers()
+		self.setup_redis_connection()
+		self.setup_twilio_client()
+		self.setup_time_windows()
+
 	def on_shutdown( self , signal ):
 		self.log( f"Frame Consumer Shutting Down === {str(signal)}" )
 		sys.exit( 1 )
@@ -31,6 +37,56 @@ class FrameConsumer:
 	def log( self , message ):
 		time_string_prefix = utils.get_common_time_string( self.timezone )
 		print( f"{time_string_prefix} === {message}" )
+
+	def read_json( self , file_path ):
+		with open( file_path ) as f:
+			return json.load( f )
+
+	def setup_environment( self ):
+		os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+	def setup_signal_handlers( self ):
+		signal.signal( signal.SIGABRT , self.on_shutdown )
+		signal.signal( signal.SIGFPE , self.on_shutdown )
+		signal.signal( signal.SIGILL , self.on_shutdown )
+		signal.signal( signal.SIGSEGV , self.on_shutdown )
+		signal.signal( signal.SIGTERM , self.on_shutdown )
+		signal.signal( signal.SIGINT , self.on_shutdown )
+
+	def setup_redis_connection( self ):
+		self.redis = None
+		self.redis = redis.StrictRedis(
+			host=self.config["redis"]["host"] ,
+			port=self.config["redis"]["port"] ,
+			db=self.config["redis"]["db"] ,
+			password=self.config["redis"]["password"] ,
+			decode_responses=True
+		)
+
+	def setup_twilio_client( self ):
+		self.twilio_client = None
+		self.twilio_client = Client( self.config["twilio"]["sid"] , self.config["twilio"]["auth_token"] )
+
+	def setup_time_windows( self ):
+		self.time_windows = {}
+		time_zone = timezone( self.config["misc"]["time_zone"] )
+		now = datetime.datetime.now().astimezone( time_zone )
+		now = now - datetime.timedelta( hours=0 , minutes=0 , seconds=180 )
+		for index , time_window in enumerate( self.config["time_windows"] ):
+			time_window["id"] = hashlib.sha256( json.dumps( time_window ).encode( 'utf-8' ) ).hexdigest()
+			if "notifications" in time_window:
+				if "sms" in time_window["notifications"]:
+					time_window["notifications"]["sms"]["last_notified_time"] = {}
+					time_window["notifications"]["sms"]["last_notified_time"]["date_time_object"] = now
+				if "voice" in time_window["notifications"]:
+					time_window["notifications"]["voice"]["last_notified_time"] = {}
+					time_window["notifications"]["voice"]["last_notified_time"]["date_time_object"] = now
+			self.time_windows[time_window["id"]] = time_window
+			# redis_client.set( f"{config['redis']['prefix']}.TIME_WINDOWS.{time_window['id']}" , json.dumps( time_window ) )
+
+	def run_in_background( self , function_pointer , *args , **kwargs ):
+		t = threading.Thread( target=function_pointer , args=args , kwargs=kwargs , daemon=True )
+		t.start()
 
 	# Server Stuff
 	async def route_home( self , request ):
@@ -66,6 +122,58 @@ class FrameConsumer:
 		self.log( "Voice Notification Callback()" )
 		self.log( result )
 
+	def twilio_message( self , from_number , to_number , message ):
+		try:
+			start_time = time.time()
+			result = self.twilio_client.messages.create(
+				to_number ,
+				from_=from_number ,
+				body=message ,
+			)
+			result = result.fetch()
+			completed_duration = False
+			for i in range( 10 ):
+				time.sleep( 1 )
+				result = result.fetch()
+				if result.status == "delivered":
+					completed_duration = int( time.time() - start_time )
+					break
+			self.on_sms_finished( { "result": result.status , "completed_duration": completed_duration } )
+			return
+		except Exception as e:
+			print ( e )
+
+	def twilio_voice_call( self , from_number , to_number , server_callback_endpoint ):
+		try:
+			start_time = time.time()
+			new_call = self.twilio_client.calls.create(
+				from_=from_number ,
+				to=to_number ,
+				url=server_callback_endpoint ,
+				method="POST"
+			)
+			answered = False
+			completed = False
+			answer_duration = None
+			completed_duration = None
+			for i in range( 30 ):
+				time.sleep( 1 )
+				new_call = new_call.update()
+				status = new_call.status
+				self.log( status )
+				if status == "in-progress":
+					answered = True
+					answer_duration = int( time.time() - start_time )
+				if status == "completed":
+					completed = True
+					completed_duration = int( time.time() - start_time )
+					break
+			self.on_voice_call_finished( { "answered": answered , "completed": completed , "answer_duration": answer_duration , "completed_duration": completed_duration } )
+			return
+		except Exception as e:
+			print( e )
+			callback_function( "failed to make twilio call" )
+
 	def send_sms_notification( self , new_motion_event , key ):
 		self.log( "=== SMS Alert ===" )
 		seconds_since_last_notification = utils.get_now_time_difference( self.timezone , self.time_windows[key]["notifications"]["sms"]["last_notified_time"]["date_time_object"] )
@@ -79,13 +187,11 @@ class FrameConsumer:
 		self.time_windows[key]["notifications"]["sms"]["last_notified_time"]["date_time_object"] = datetime.datetime.now().astimezone( self.timezone )
 		# self.redis.set( f"{config['redis']['prefix']}.TIME_WINDOWS.{self.time_windows[key]['id']}" , json.dumps( self.time_windows[key] ) )
 		self.log( "Sending SMS Notification" )
-		utils.run_in_background(
-			utils.twilio_message ,
-			self.twilio_client ,
+		self.run_in_background(
+			self.twilio_message ,
 			self.time_windows[key]["notifications"]["sms"]["from_number"] ,
 			self.time_windows[key]["notifications"]["sms"]["to_number"] ,
 			f'{self.time_windows[key]["notifications"]["sms"]["message_prefix"]} @@ {new_motion_event["date_time_string"]}' ,
-			self.on_sms_finished
 		)
 
 	def send_voice_notification( self , now_motion_event , key ):
@@ -101,13 +207,11 @@ class FrameConsumer:
 		self.time_windows[key]["notifications"]["voice"]["last_notified_time"]["date_time_object"] = datetime.datetime.now().astimezone( self.timezone )
 		# self.redis.set( f"{config['redis']['prefix']}.TIME_WINDOWS.{self.time_windows[key]['id']}" , json.dumps( self.time_windows[key] ) )
 		self.log( "Sending Voice Call Notification" )
-		utils.run_in_background(
-			utils.twilio_voice_call ,
-			self.twilio_client ,
+		self.run_in_background(
+			self.twilio_voice_call ,
 			self.time_windows[key]["notifications"]["voice"]["from_number"] ,
 			self.time_windows[key]["notifications"]["voice"]["to_number"] ,
 			self.time_windows[key]["notifications"]["voice"]["callback_url"] ,
-			self.on_voice_call_finished
 		)
 
 	def send_notifications( self , new_motion_event , key ):
@@ -130,6 +234,8 @@ class FrameConsumer:
 		}
 
 		# 1.) Run 'nets' on Image Buffer
+		print( "" )
+		self.log( f"Processing Frame --> SinglePoseLightningv3.tflite( {len( json_data['frame_buffer_b64_string'] )} )" )
 		new_motion_event["pose_scores"] = await pose_light.process_opencv_frame( json_data )
 
 		# 2.) Get 'Most Recent' Array of Motion Events

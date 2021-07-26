@@ -116,7 +116,7 @@ def OnMotionFrame( frame ):
 
 async def process_opencv_frame( json_data ):
 	try:
-		print( f"\nProcessing Frame --> SinglePoseLightningv3.tflite( {len( json_data['frame_buffer_b64_string'] )} )" )
+		# print( f"\nProcessing Frame --> SinglePoseLightningv3.tflite( {len( json_data['frame_buffer_b64_string'] )} )" )
 		image_data = base64.b64decode( json_data['frame_buffer_b64_string'] )
 		image = tf.image.decode_image( image_data , channels=3 )
 		image = tf.expand_dims( image , axis=0 )
