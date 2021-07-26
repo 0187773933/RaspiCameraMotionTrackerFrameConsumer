@@ -24,7 +24,6 @@ from twilio.rest import Client
 class FrameConsumer:
 	def __init__( self ):
 		self.config = self.read_json( sys.argv[ 1 ] )
-		self.timezone = timezone( self.config["misc"]["time_zone"] )
 		self.setup_environment()
 		self.setup_signal_handlers()
 		self.setup_redis_connection()
@@ -44,14 +43,22 @@ class FrameConsumer:
 
 	def log( self , message ):
 		time_string_prefix = self.get_common_time_string()
-		print( f"{time_string_prefix} === {message}" )
+		log_message = f"{time_string_prefix} === {message}"
+		self.redis.rpush( self.log_key , log_message )
+		print( log_message )
 
 	def read_json( self , file_path ):
 		with open( file_path ) as f:
 			return json.load( f )
 
 	def setup_environment( self ):
+		self.timezone = timezone( self.config["misc"]["time_zone"] )
 		self.most_recent_key = f'{self.config["redis"]["prefix"]}.MOTION_EVENTS.MOST_RECENT'
+		now = datetime.datetime.now().astimezone( self.timezone )
+		day = now.strftime( "%d" ).zfill( 2 )
+		month = now.strftime( "%m" ).zfill( 2 )
+		year = now.strftime( "%Y" )
+		self.log_key = f'{self.config["redis"]["prefix"]}.LOG.{year}.{month}.{day}'
 		os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 	def setup_signal_handlers( self ):

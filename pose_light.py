@@ -5,7 +5,7 @@ from matplotlib.collections import LineCollection
 import matplotlib.patches as patches
 from pprint import pprint
 
-import utils
+# import utils
 import base64
 
 # https://blog.tensorflow.org/2021/05/next-generation-pose-detection-with-movenet-and-tensorflowjs.html
