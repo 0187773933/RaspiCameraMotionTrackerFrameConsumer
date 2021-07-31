@@ -195,7 +195,7 @@ class FrameConsumer:
 			callback_function( "failed to make twilio call" )
 
 	def send_sms_notification( self , new_motion_event , key ):
-		self.log( "=== SMS Alert ===" )
+		self.log( f"=== {key} === SMS Alert ===" )
 		seconds_since_last_notification = self.get_now_time_difference( self.time_windows[key]["notifications"]["sms"]["last_notified_time"]["date_time_object"] )
 		if seconds_since_last_notification < self.time_windows[key]["notifications"]["sms"]["cool_down"]:
 			time_left = ( self.time_windows[key]["notifications"]["sms"]["cool_down"] - seconds_since_last_notification )
@@ -215,7 +215,7 @@ class FrameConsumer:
 		)
 
 	def send_voice_notification( self , now_motion_event , key ):
-		self.log( "=== Voice Alert ===" )
+		self.log( f"=== {key} === Voice Alert ===" )
 		seconds_since_last_notification = self.get_now_time_difference( self.time_windows[key]["notifications"]["voice"]["last_notified_time"]["date_time_object"] )
 		if seconds_since_last_notification < self.time_windows[key]["notifications"]["voice"]["cool_down"]:
 			time_left = ( self.time_windows[key]["notifications"]["voice"]["cool_down"] - seconds_since_last_notification )

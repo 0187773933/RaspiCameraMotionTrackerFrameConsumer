@@ -99,5 +99,5 @@ RUN ./install_venv.sh
 # RUN python3 -m pip install redis
 
 # ENV DISPLAY=:10.0
-# # ENTRYPOINT [ "/usr/bin/python3" , "/home/$USERNAME/main.py" ]
-ENTRYPOINT [ "/bin/bash" ]
+# ENTRYPOINT [ "/bin/bash" ]
+ENTRYPOINT [ "/usr/bin/python3" , "/home/$USERNAME/FRAME_CONSUMER/main.py" ]
