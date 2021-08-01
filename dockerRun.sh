@@ -15,3 +15,6 @@ sudo docker logs -f $id
 # --device "/dev/video0:/dev/video0" \
 
 # sudo docker exec -it 4ba44b079ac9 /bin/bash
+
+
+# sudo docker run -it --rm  --entrypoint "/bin/bash" xp6qhg9fmuolztbd2ixwdbtd1/raspi-motion-tracker-frame-consumer:arm32
