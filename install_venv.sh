@@ -14,7 +14,7 @@
 # rm ./wheels/tensorflow.zip
 wget https://39363.org/WHEELS/RASPI/tensorflow-2.4.0-cp37-cp37m-linux_armv7l.whl -O ./wheels/tensorflow-2.4.0-cp37-cp37m-linux_armv7l.whl
 /home/morphs/.pyenv/versions/3.7.3/bin/python3.7 -m pip install ./wheels/tensorflow-2.4.0-cp37-cp37m-linux_armv7l.whl
-/home/morphs/.pyenv/versions/3.7.3/bin/python3.7 -m pip install install ./wheels/sanic-21.6.0-py3-none-any.whl
+/home/morphs/.pyenv/versions/3.7.3/bin/python3.7 -m pip install ./wheels/sanic-21.6.0-py3-none-any.whl
 /home/morphs/.pyenv/versions/3.7.3/bin/python3.7 -m pip install ./wheels/uvloop-0.15.2-cp37-cp37m-linux_armv7l.whl
 /home/morphs/.pyenv/versions/3.7.3/bin/python3.7 -m pip install ./wheels/httptools-0.2.0-cp37-cp37m-linux_armv7l.whl
 /home/morphs/.pyenv/versions/3.7.3/bin/python3.7 -m pip install ./wheels/websockets-9.1-cp37-cp37m-linux_armv7l.whl
