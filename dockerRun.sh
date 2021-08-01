@@ -1,9 +1,12 @@
 #!/bin/bash
 APP_NAME="rpmt-frame-consumer"
-sudo docker run -dit \
+sudo docker rm $APP_NAME || echo ""
+IMAGE_NAME="xp6qhg9fmuolztbd2ixwdbtd1/raspi-motion-tracker-frame-consumer:arm32test"
+id=$(sudo docker run -dit \
 --name $APP_NAME \
 -p 9379:9379 \
-$APP_NAME
+$IMAGE_NAME config.json)
+sudo docker logs -f $id
 
 
 # -v ${PWD}/PythonVersion/built_wheels:/home/morphs/built_wheels \

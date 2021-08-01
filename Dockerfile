@@ -48,7 +48,6 @@ RUN apt-get install openssl -y
 RUN apt-get install libffi-dev -y
 RUN apt-get install libbz2-dev -y
 RUN apt-get install libreadline-dev -y
-RUN apt-get install ca-certificates -y
 RUN apt-get install llvm -y
 RUN apt-get install libncurses5-dev -y
 RUN apt-get install xz-utils -y
@@ -56,10 +55,14 @@ RUN apt-get install tk-dev -y
 RUN apt-get install libxml2-dev -y
 RUN apt-get install libxmlsec1-dev -y
 RUN apt-get install liblzma-dev -y
-RUN apt-get install mecab-ipadic-utf8 -y
 RUN apt-get install libatlas-base-dev -y
 RUN apt-get install libopenjp2-7 -y
 RUN apt-get install libtiff5 -y
+RUN apt-get install apt-transport-https -y
+RUN apt-get install ca-certificates  -y
+RUN update-ca-certificates -f
+RUN mkdir -p /etc/pki/tls/certs
+RUN cp /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
 
 ENV TZ="US/Eastern"
 RUN echo "US/Eastern" > /etc/timezone
@@ -71,6 +74,7 @@ RUN mkdir -p /home/$USERNAME
 RUN chown -R $USERNAME:$USERNAME /home/$USERNAME
 RUN usermod -aG sudo $USERNAME
 RUN echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+RUN echo 'cacert=/etc/ssl/certs/ca-certificates.crt' > ~/.curlrc
 
 USER $USERNAME
 WORKDIR /home/$USERNAME
@@ -92,12 +96,6 @@ RUN /home/$USERNAME/.pyenv/bin/pyenv rehash
 
 WORKDIR /home/$USERNAME/FRAME_CONSUMER
 RUN ./install_venv.sh
-# RUN /home/morphs/.pyenv/versions/3.7.3/bin/python3.7 -m venv venv
-
-# RUN python3 -m pip install requests
-# RUN python3 -m pip install imutils
-# RUN python3 -m pip install redis
-
 # ENV DISPLAY=:10.0
 # ENTRYPOINT [ "/bin/bash" ]
-ENTRYPOINT [ "/usr/bin/python3" , "/home/$USERNAME/FRAME_CONSUMER/main.py" ]
+ENTRYPOINT [ "/usr/bin/python3" , "/home/morphs/FRAME_CONSUMER/main.py" ]
