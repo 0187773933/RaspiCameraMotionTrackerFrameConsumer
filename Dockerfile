@@ -98,4 +98,4 @@ WORKDIR /home/$USERNAME/FRAME_CONSUMER
 RUN ./install_venv.sh
 # ENV DISPLAY=:10.0
 # ENTRYPOINT [ "/bin/bash" ]
-ENTRYPOINT [ "/usr/bin/python3" , "/home/morphs/FRAME_CONSUMER/main.py" ]
+ENTRYPOINT [ "/home/morphs/.pyenv/versions/3.7.3/bin/python3.7" , "/home/morphs/FRAME_CONSUMER/main.py" ]
