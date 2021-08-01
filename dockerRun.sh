@@ -5,6 +5,7 @@ IMAGE_NAME="xp6qhg9fmuolztbd2ixwdbtd1/raspi-motion-tracker-frame-consumer:arm32t
 id=$(sudo docker run -dit \
 --name $APP_NAME \
 -p 9379:9379 \
+-v $(pwd)/config.json:/home/morphs/FRAME_CONSUMER/config.json:ro
 $IMAGE_NAME config.json)
 sudo docker logs -f $id
 

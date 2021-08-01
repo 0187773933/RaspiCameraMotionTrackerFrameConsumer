@@ -2,8 +2,8 @@
 
 # 0.) Use PyEnv to Install 3.7.3
 
-#/home/morphs/.pyenv/versions/3.7.3/bin/python3.7 -m venv venv
-#source ./venv/bin/activate
+/home/morphs/.pyenv/versions/3.7.3/bin/python3.7 -m venv venv
+source ./venv/bin/activate
 
 pip install ./wheels/numpy-1.19.5-cp37-cp37m-linux_armv7l.whl
 pip install ./wheels/h5py-2.10.0-cp37-cp37m-linux_armv7l.whl
