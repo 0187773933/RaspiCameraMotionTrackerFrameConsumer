@@ -74,10 +74,10 @@ RUN mkdir -p /home/$USERNAME
 RUN chown -R $USERNAME:$USERNAME /home/$USERNAME
 RUN usermod -aG sudo $USERNAME
 RUN echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-RUN echo 'cacert=/etc/ssl/certs/ca-certificates.crt' > ~/.curlrc
 
 USER $USERNAME
 WORKDIR /home/$USERNAME
+RUN echo 'cacert=/etc/ssl/certs/ca-certificates.crt' > ~/.curlrc
 RUN mkdir -p /home/$USERNAME/FRAME_CONSUMER
 RUN sudo chown -R $USERNAME:$USERNAME /home/$USERNAME/FRAME_CONSUMER
 COPY . /home/$USERNAME/FRAME_CONSUMER
